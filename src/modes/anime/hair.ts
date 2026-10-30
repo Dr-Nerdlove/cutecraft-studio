@@ -23,6 +23,39 @@ function locks(tips: Pt[], depth: number, up = true): string {
   return d;
 }
 
+/**
+ * Bangs: every lock ends in a sharp point (steep edges at the tip, narrow gaps between locks), so the
+ * fringe reads as anime hair instead of a row of round drops. Same shape contract as `locks`.
+ */
+function bangLocks(tips: Pt[], depth: number): string {
+  let d = '';
+  for (let i = 0; i < tips.length - 1; i++) {
+    const A = tips[i], B = tips[i + 1];
+    const V: Pt = { x: (A.x + B.x) / 2, y: Math.min(A.y, B.y) - depth };
+    const dx1 = V.x - A.x, dx2 = B.x - V.x;
+    const dy1 = V.y - A.y, dy2 = B.y - V.y;
+    d += C(A.x + dx1 * 0.05, A.y + dy1 * 0.45, V.x - dx1 * 0.32, V.y - dy1 * 0.1, V.x, V.y);
+    d += C(V.x + dx2 * 0.32, V.y + dy2 * 0.1, B.x - dx2 * 0.05, B.y - dy2 * 0.45, B.x, B.y);
+  }
+  return d;
+}
+
+/**
+ * Gives the bang tips a sweep and uneven lengths so the fringe does not look like a comb. The two
+ * outer tips stay where they are: they join the side locks.
+ */
+function styleBangTips(ctx: Ctx, tips: Pt[]): Pt[] {
+  const { g, p } = ctx;
+  const hw = g.hw, u = g.u;
+  const LEN = [0.03, -0.02, 0.0]; // in head heights, positive = longer
+  return tips.map((t, i) => {
+    if (i === 0 || i === tips.length - 1) return t;
+    // side-swept bangs sweep one way; the others fan out from the middle
+    const dir = p.hairFront === 'side' ? 1 : clamp(t.x / (hw * 0.7), -1, 1);
+    return { x: t.x + dir * hw * 0.07, y: t.y + LEN[i % 3] * u };
+  });
+}
+
 function skullArc(g: Geo, rx: number, yc: number, vTop: number, from: number, to: number, n = 10): Pt[] {
   const ry = yc - (g.yTop - vTop);
   const pts: Pt[] = [];
@@ -262,7 +295,8 @@ export function hairFrontSvg(ctx: Ctx): string {
   const fills = hairFills(ctx);
   const hw = g.hw, u = g.u;
   const m = metrics(ctx);
-  const { tips, crown } = bangTips(ctx);
+  const { tips: rawTips, crown } = bangTips(ctx);
+  const tips = styleBangTips(ctx, rawTips);
   const lock = sideLock(ctx);
 
   const jl = tips[0];
@@ -306,7 +340,7 @@ export function hairFrontSvg(ctx: Ctx): string {
 
   const d =
     M(A.x, A.y) + left.down + left.up +
-    locks(tips, u * 0.09, true) +
+    bangLocks(tips, u * 0.09) +
     rInner + rOuter +
     smoothOpen(arcR, 1 / 6, false) + 'Z';
 

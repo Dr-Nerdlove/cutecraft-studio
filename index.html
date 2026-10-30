@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>CuteCraft Studio</title>
     <meta name="theme-color" content="#ffc2dc" />
+    <script>
+      // Apply the saved theme before first paint (no flash). Keep in sync with src/ui/theme.ts.
+      (function () {
+        try {
+          var s = localStorage.getItem('cutecraft.theme');
+          var dark;
+          if (s === 'light' || s === 'dark') {
+            document.documentElement.dataset.theme = s;
+            dark = s === 'dark';
+          } else {
+            dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          }
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#221a36' : '#ffc2dc');
+        } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
   </head>

@@ -15,6 +15,7 @@ export function getTheme(): Theme {
   return chosen() ?? (darkQuery?.matches ? 'dark' : 'light');
 }
 
+// Keep in sync with the inline script in index.html, which applies the saved theme before first paint.
 function apply(): void {
   const c = chosen();
   const root = document.documentElement;

@@ -129,7 +129,7 @@ export function portraitBox(g: Geo): { x: number; y: number; w: number; h: numbe
   const s = g.scale;
   const top = GROUND_Y + (g.yTop - g.topExtra - g.u * 0.06) * s;
   const bottom = GROUND_Y + (g.yChin + g.u * 0.6) * s;
-  const half = Math.max(g.hw * 1.2, Math.min(g.hairHalf, g.hw * 1.8)) * s;
+  const half = Math.max(g.hw * 1.2, Math.min(g.hairHalf, g.hw * 2.0)) * s;
   const h = Math.min(VIEW_H, Math.max(bottom - top, half * 3)); // 2:3 -> height = 1.5 * width = 3 * half
   const w = (h * VIEW_W) / VIEW_H;
   const y = clamp((top + bottom) / 2 - h / 2, 0, VIEW_H - h);

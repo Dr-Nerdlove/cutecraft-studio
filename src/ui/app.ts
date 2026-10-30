@@ -36,6 +36,7 @@ export function mountApp(root: HTMLElement): void {
   let frame = 0;
   let view: ViewKind = storageGet(VIEW_KEY) === 'portrait' ? 'portrait' : 'full';
   let viewBtn: HTMLButtonElement | null = null;
+  let themeBtn: HTMLButtonElement | null = null;
 
   const currentMode = (): Mode => getMode(store.character.mode) ?? defaultMode;
 
@@ -118,6 +119,15 @@ export function mountApp(root: HTMLElement): void {
     { id: 'export', icon: '📥', labelKey: 'tool.export', run: () => void exportPng() },
   ];
 
+  // Colours are CSS variables, so a theme change only needs the header button updated, not a rebuild.
+  function updateThemeBtn(): void {
+    if (!themeBtn) return;
+    const toDark = getTheme() === 'light';
+    themeBtn.textContent = toDark ? '🌙' : '☀️';
+    themeBtn.setAttribute('aria-label', t(toDark ? 'header.dark' : 'header.light'));
+    themeBtn.title = t(toDark ? 'header.dark' : 'header.light');
+  }
+
   function build(): void {
     document.title = t('app.title');
     root.replaceChildren();
@@ -147,13 +157,10 @@ export function mountApp(root: HTMLElement): void {
     });
     modeWrap.appendChild(select);
 
-    const themeBtn = h('button', 'theme-btn');
+    themeBtn = h('button', 'theme-btn');
     themeBtn.type = 'button';
-    const toDark = getTheme() === 'light';
-    themeBtn.textContent = toDark ? '🌙' : '☀️';
-    themeBtn.setAttribute('aria-label', t(toDark ? 'header.dark' : 'header.light'));
-    themeBtn.title = t(toDark ? 'header.dark' : 'header.light');
     themeBtn.addEventListener('click', toggleTheme);
+    updateThemeBtn();
     actions.append(modeWrap, themeBtn);
     header.append(brand, actions);
 
@@ -200,7 +207,7 @@ export function mountApp(root: HTMLElement): void {
   }
 
   onLangChange(build);
-  onThemeChange(build);
+  onThemeChange(updateThemeBtn);
 
   document.addEventListener('keydown', (e) => {
     const target = e.target as HTMLElement | null;

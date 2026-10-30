@@ -42,6 +42,7 @@ export interface Geo {
   scale: number;
   topExtra: number;
   halfW: number;
+  hairHalf: number; // half width of the hair (used by the portrait view)
 }
 
 export const VIEW_W = 400;
@@ -92,7 +93,7 @@ export function computeGeo(p: AnimeParams): Geo {
     chestBulge: lerp(0.0, 0.07, build) * (shW / 2),
     armR, armLen, armAngle: lerp(0.1, 0.085, k),
     legCx, thighHW, kneeHW, ankleHW,
-    scale: 1, topExtra: 0, halfW: 0,
+    scale: 1, topExtra: 0, halfW: 0, hairHalf: 0,
   };
 
   // --- extents for scale-to-fit (generous estimates of everything that sticks out) ---
@@ -107,6 +108,7 @@ export function computeGeo(p: AnimeParams): Geo {
 
   const hairHalf =
     { short: 1.25, bob: 1.35, long: 1.3, wavy: 1.38, ponytail: 2.0, twintails: 2.15, buns: 1.25 }[p.hairBack] * hw;
+  geo.hairHalf = hairHalf;
   const longSpread = ['long', 'wavy'].includes(p.hairBack) ? geo.shHW * 1.12 : 0;
   const hemHalf = p.top === 'dress' ? hipHW * 1.12 + u * 0.16 + 4 : hipHW * 1.1 + u * 0.11 + 4;
   const bodyHalf = Math.max(geo.shHW + armR * 2 + armLen * Math.sin(geo.armAngle) + 4, hemHalf);
@@ -116,6 +118,22 @@ export function computeGeo(p: AnimeParams): Geo {
   const fit = Math.min(1.04, availH / (H + geo.topExtra), (VIEW_W / 2 - 8) / geo.halfW);
   geo.scale = fit * lerp(0.74, 1, p.height / 100);
   return geo;
+}
+
+/**
+ * The part of the 400x600 picture that the portrait view shows (same 2:3 shape as the full picture,
+ * so it fills the preview). Head and shoulders, wide enough for the hair, never larger than the
+ * full picture (a chibi head is already almost the whole figure).
+ */
+export function portraitBox(g: Geo): { x: number; y: number; w: number; h: number } {
+  const s = g.scale;
+  const top = GROUND_Y + (g.yTop - g.topExtra - g.u * 0.06) * s;
+  const bottom = GROUND_Y + (g.yChin + g.u * 0.85) * s;
+  const half = Math.max(g.hw * 1.45, Math.min(g.hairHalf, g.hw * 2.2)) * s;
+  const h = Math.min(VIEW_H, Math.max(bottom - top, half * 3)); // 2:3 -> height = 1.5 * width = 3 * half
+  const w = (h * VIEW_W) / VIEW_H;
+  const y = clamp((top + bottom) / 2 - h / 2, 0, VIEW_H - h);
+  return { x: (VIEW_W - w) / 2, y, w, h };
 }
 
 // ---- face outline -----------------------------------------------------------------------------

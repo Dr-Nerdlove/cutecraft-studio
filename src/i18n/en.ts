@@ -15,6 +15,8 @@ export const en: Dictionary = {
   'tool.gallery': 'Gallery',
   'tool.export': 'Export PNG',
   'tool.toolbar': 'Tools',
+  'view.portrait': 'Portrait: bigger face',
+  'view.full': 'Show full body',
   'preview.label': 'Preview of your character',
   'panel.tabs': 'Categories',
 

@@ -1,4 +1,5 @@
-import { VIEW_H, VIEW_W, GROUND_Y } from './geometry';
+import type { ViewKind } from '../../core/mode';
+import { VIEW_H, VIEW_W, GROUND_Y, portraitBox } from './geometry';
 import { makeCtx } from './context';
 import { backgroundSvg } from './background';
 import { armsSvg, groundShadowSvg, legsSvg, neckSvg, shoesSvg, socksSvg, torsoSvg } from './body';
@@ -10,7 +11,7 @@ import { glassesSvg, headBehindSvg, headFrontSvg } from './accessories';
 import type { AnimeParams } from './schema';
 
 /** Draws the whole character (front to back). */
-export function renderAnime(p: AnimeParams, prefix: string): string {
+export function renderAnime(p: AnimeParams, prefix: string, view: ViewKind = 'full'): string {
   const ctx = makeCtx(p, prefix);
   const { g } = ctx;
   const figure =
@@ -40,8 +41,11 @@ export function renderAnime(p: AnimeParams, prefix: string): string {
     headFrontSvg(ctx) +
     glassesSvg(ctx);
 
+  const box = view === 'portrait' ? portraitBox(g) : { x: 0, y: 0, w: VIEW_W, h: VIEW_H };
+  const vb = `${box.x.toFixed(2)} ${box.y.toFixed(2)} ${box.w.toFixed(2)} ${box.h.toFixed(2)}`;
+
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEW_W} ${VIEW_H}" preserveAspectRatio="xMidYMid meet">` +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" preserveAspectRatio="xMidYMid meet">` +
     backgroundSvg(ctx) +
     `<g transform="translate(${VIEW_W / 2} ${GROUND_Y}) scale(${g.scale.toFixed(4)})">${figure}</g>` +
     '</svg>'

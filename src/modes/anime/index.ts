@@ -16,5 +16,5 @@ export const animeMode: Mode = {
   categories: animeCategories,
   defaults,
   randomize: () => randomAnime() as unknown as Params,
-  render: (params, idPrefix) => renderAnime(params as unknown as AnimeParams, idPrefix),
+  render: (params, idPrefix, view) => renderAnime(params as unknown as AnimeParams, idPrefix, view),
 };

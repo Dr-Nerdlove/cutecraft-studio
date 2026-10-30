@@ -1,7 +1,7 @@
 import { downloadBlob, safeFileName, svgToPngBlob } from '../core/exportPng';
-import type { Mode } from '../core/mode';
+import type { Mode, ViewKind } from '../core/mode';
 import { defaultMode, getMode, modes } from '../core/modes';
-import { loadCurrent, newCharacter } from '../core/storage';
+import { VIEW_KEY, loadCurrent, newCharacter, storageGet, storageSet } from '../core/storage';
 import { getLang, onLangChange, setLang, t, type Key, type Lang } from '../i18n';
 import { buildControls, type ControlsHandle } from './controls';
 import { askConfirm, askText, toast } from './dialog';
@@ -33,13 +33,31 @@ export function mountApp(root: HTMLElement): void {
   let undoBtn: HTMLButtonElement | null = null;
   let redoBtn: HTMLButtonElement | null = null;
   let frame = 0;
+  let view: ViewKind = storageGet(VIEW_KEY) === 'portrait' ? 'portrait' : 'full';
+  let viewBtn: HTMLButtonElement | null = null;
 
   const currentMode = (): Mode => getMode(store.character.mode) ?? defaultMode;
 
   function drawPreview(): void {
     frame = 0;
     if (!preview) return;
-    preview.innerHTML = currentMode().render(store.character.params, 'pv-');
+    preview.innerHTML = currentMode().render(store.character.params, 'pv-', view);
+  }
+
+  function syncViewButton(): void {
+    if (!viewBtn) return;
+    const label = t(view === 'portrait' ? 'view.full' : 'view.portrait');
+    viewBtn.title = label;
+    viewBtn.setAttribute('aria-label', label);
+    viewBtn.setAttribute('aria-pressed', String(view === 'portrait'));
+    viewBtn.textContent = view === 'portrait' ? '🧍' : '🔍';
+  }
+
+  function toggleView(): void {
+    view = view === 'portrait' ? 'full' : 'portrait';
+    storageSet(VIEW_KEY, view);
+    syncViewButton();
+    drawPreview();
   }
 
   function schedulePreview(): void {
@@ -77,7 +95,7 @@ export function mountApp(root: HTMLElement): void {
 
   async function exportPng(): Promise<void> {
     try {
-      const svg = currentMode().render(store.character.params, 'exp-');
+      const svg = currentMode().render(store.character.params, 'exp-', view);
       const blob = await svgToPngBlob(svg, 400, 600, 2);
       downloadBlob(blob, `cutecraft-${safeFileName(store.name)}.png`);
       toast(t('toast.exported'));
@@ -146,7 +164,11 @@ export function mountApp(root: HTMLElement): void {
     preview = h('div', 'preview');
     preview.setAttribute('role', 'img');
     preview.setAttribute('aria-label', t('preview.label'));
-    card.appendChild(preview);
+    viewBtn = h('button', 'view-btn');
+    viewBtn.type = 'button';
+    viewBtn.addEventListener('click', toggleView);
+    card.append(preview, viewBtn);
+    syncViewButton();
     const bar = h('div', 'toolbar');
     bar.setAttribute('role', 'toolbar');
     bar.setAttribute('aria-label', t('tool.toolbar'));

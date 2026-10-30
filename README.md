@@ -15,7 +15,7 @@ from the same code.
 - Body, face, eyes, hair, outfit, accessories and background, all as sliders, colour swatches (plus custom
   colours), option chips and switches.
 - Randomize (harmonious colours), reset, undo / redo, save to a gallery, export as PNG (2x).
-- German and English, switchable in the header (default follows the browser language).
+- German and English, chosen automatically from the system language (German if the system is German, otherwise English).
 - Works offline: no external fonts, scripts or services. Saved characters stay in the browser (`localStorage`).
 
 ## Run it

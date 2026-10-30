@@ -4,7 +4,6 @@ export const en: Dictionary = {
   'app.title': 'CuteCraft Studio',
   'app.tagline': 'Create your very own cutie',
   'header.mode': 'Style',
-  'header.language': 'Switch language',
   'mode.anime': 'Anime',
 
   'tool.random': 'Randomize',

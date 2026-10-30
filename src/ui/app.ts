@@ -2,7 +2,7 @@ import { downloadBlob, safeFileName, svgToPngBlob } from '../core/exportPng';
 import type { Mode, ViewKind } from '../core/mode';
 import { defaultMode, getMode, modes } from '../core/modes';
 import { VIEW_KEY, loadCurrent, newCharacter, storageGet, storageSet } from '../core/storage';
-import { getLang, onLangChange, setLang, t, type Key, type Lang } from '../i18n';
+import { onLangChange, t, type Key } from '../i18n';
 import { buildControls, type ControlsHandle } from './controls';
 import { askConfirm, askText, toast } from './dialog';
 import { addToGallery, nextAutoName, openGallery } from './gallery';
@@ -146,16 +146,7 @@ export function mountApp(root: HTMLElement): void {
     });
     modeWrap.appendChild(select);
 
-    const langBtn = h('button', 'lang-btn');
-    langBtn.type = 'button';
-    langBtn.setAttribute('aria-label', t('header.language'));
-    langBtn.title = t('header.language');
-    const lang = getLang();
-    for (const code of ['de', 'en'] as Lang[]) {
-      langBtn.appendChild(h('span', code === lang ? 'on' : '', code.toUpperCase()));
-    }
-    langBtn.addEventListener('click', () => setLang(getLang() === 'de' ? 'en' : 'de'));
-    actions.append(modeWrap, langBtn);
+    actions.append(modeWrap);
     header.append(brand, actions);
 
     // stage: preview + tools

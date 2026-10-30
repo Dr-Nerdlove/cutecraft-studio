@@ -3,7 +3,6 @@ export const de = {
   'app.title': 'CuteCraft Studio',
   'app.tagline': 'Erschaffe deine ganz eigene süße Figur',
   'header.mode': 'Stil',
-  'header.language': 'Sprache wechseln',
   'mode.anime': 'Anime',
 
   'tool.random': 'Zufall',

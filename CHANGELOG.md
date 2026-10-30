@@ -6,6 +6,8 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Changed
 
+- The language now follows the system language automatically (German or English); the manual language switch in the header is gone.
+- The portrait view zooms in closer on the face.
 - Bangs now end in sharp points with a slight sweep and uneven lengths, instead of looking like round drops.
 
 ### Added

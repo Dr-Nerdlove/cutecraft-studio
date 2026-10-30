@@ -1,32 +1,23 @@
 import { de } from './de';
 import { en } from './en';
 import type { Dictionary, Key } from './types';
-import { LANG_KEY, storageGet, storageSet } from '../core/storage';
 
 export type { Key, Dictionary } from './types';
 export type Lang = 'de' | 'en';
 
 const dictionaries: Record<Lang, Dictionary> = { de, en };
 
+/** German if the system's preferred language is German, otherwise English. */
 function detectLang(): Lang {
-  const saved = storageGet(LANG_KEY);
-  if (saved === 'de' || saved === 'en') return saved;
-  const nav = typeof navigator !== 'undefined' ? (navigator.language || '').toLowerCase() : '';
-  return nav.startsWith('de') ? 'de' : 'en';
+  if (typeof navigator === 'undefined') return 'en';
+  const first = (navigator.languages?.[0] || navigator.language || '').toLowerCase();
+  return first.startsWith('de') ? 'de' : 'en';
 }
 
 let current: Lang = detectLang();
 const listeners = new Set<() => void>();
 
 export const getLang = (): Lang => current;
-
-export function setLang(lang: Lang): void {
-  if (lang === current) return;
-  current = lang;
-  storageSet(LANG_KEY, lang);
-  document.documentElement.lang = lang;
-  listeners.forEach((fn) => fn());
-}
 
 export function onLangChange(fn: () => void): void {
   listeners.add(fn);
@@ -43,4 +34,12 @@ export function t(key: Key, vars?: Record<string, string | number>): string {
 
 export function initLang(): void {
   document.documentElement.lang = current;
+  // follow the system language while the app is open
+  window.addEventListener('languagechange', () => {
+    const next = detectLang();
+    if (next === current) return;
+    current = next;
+    document.documentElement.lang = next;
+    listeners.forEach((fn) => fn());
+  });
 }

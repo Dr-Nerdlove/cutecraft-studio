@@ -173,33 +173,6 @@ button {
   cursor: pointer;
 }
 
-.lang-btn {
-  display: inline-flex;
-  height: 38px;
-  padding: 3px;
-  border: 2px solid var(--line);
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: var(--shadow-sm);
-}
-
-.lang-btn span {
-  display: grid;
-  place-items: center;
-  min-width: 34px;
-  padding: 0 6px;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: var(--ink-soft);
-  transition: background 0.2s, color 0.2s;
-}
-
-.lang-btn span.on {
-  background: linear-gradient(135deg, var(--pink), var(--lav));
-  color: #fff;
-}
-
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -851,12 +824,6 @@ button {
   .select {
     height: 36px;
     padding: 0 28px 0 12px;
-  }
-  .lang-btn {
-    height: 36px;
-  }
-  .lang-btn span {
-    min-width: 28px;
   }
 }
 

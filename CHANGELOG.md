@@ -4,6 +4,10 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ## Unreleased
 
+### Changed
+
+- Bangs now end in sharp points with a slight sweep and uneven lengths, instead of looking like round drops.
+
 ### Added
 
 - First version of the web app: a cute 2D character builder with an anime mode (layered SVG drawing).

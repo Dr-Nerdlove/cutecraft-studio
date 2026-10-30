@@ -129,7 +129,13 @@ missing, with a recommendation, and let the people choose.
 - **Product:** "CuteCraft Studio", a cute character builder: users adjust everything from hair colour and
   facial features to body shape and outfit (similar in spirit to the Sims or Cyberpunk creators). It is
   planned to have several style modes; the first one is an **anime look** mode. Look and feel must be cute.
-- **Product languages:** not decided yet - ask the owner before the first user-facing texts are written.
+- **Decisions (Oct 2026):** a **web app** first (runs in the browser on phone, tablet and PC), later also an
+  **Android app** built from the same code (planned: Capacitor wrapper, separate change). The character is
+  **drawn in 2D** (layered SVG), not 3D. The anime mode has a **proportion slider from chibi to normal anime
+  proportions**.
+- **Product languages:** **German and English**, switchable in the app. Every user-facing text lives in
+  `src/i18n/` (one file per language, the English dictionary is type-checked against the German one, so a
+  missing text fails the build).
 - **Build and test:** no code yet. Fill in once the tech stack is chosen.
 - **Release:** not defined yet. Fill in once the first version is to be published.
 - **Traps:** none recorded yet.

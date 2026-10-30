@@ -14,6 +14,8 @@ export const de = {
   'tool.gallery': 'Galerie',
   'tool.export': 'PNG-Export',
   'tool.toolbar': 'Werkzeuge',
+  'view.portrait': 'Porträt: Gesicht groß',
+  'view.full': 'Ganzkörper zeigen',
   'preview.label': 'Vorschau deiner Figur',
   'panel.tabs': 'Kategorien',
 

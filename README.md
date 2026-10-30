@@ -5,6 +5,8 @@ proportions and outfit, and watch the character change live. The first style mod
 proportion slider from chibi to normal anime proportions. More style modes are planned, and an Android app built
 from the same code.
 
+**Try it:** <https://dr-nerdlove.github.io/cutecraft-studio/> (works on phone, tablet and PC; on a phone, "Add to home screen" installs it like an app).
+
 ![CuteCraft Studio on a desktop screen](docs/screenshot-desktop.png)
 
 ## Features
@@ -41,6 +43,12 @@ public/            web app manifest and icons
 ```
 
 A new style mode implements the `Mode` interface (`src/core/mode.ts`) and is added to `src/core/modes.ts`.
+
+## Build checks and publishing
+
+Every push and pull request is built by GitHub Actions (`.github/workflows/pages.yml`: `npm ci` + `npm run build`).
+A push to `main` that builds successfully is published automatically to GitHub Pages at <https://dr-nerdlove.github.io/cutecraft-studio/>.
+Never upload built files by hand. One-time setup in the repository: Settings → Pages → Source: **GitHub Actions**.
 
 ## Saved data
 

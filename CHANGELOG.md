@@ -12,3 +12,4 @@ All notable changes to CuteCraft Studio. Format: newest first.
 - Randomize, reset, undo and redo, save to a gallery (kept in the browser), export as PNG.
 - German and English interface, switchable in the header; the choice is remembered.
 - Web app manifest and app icon, so the page can be added to a home screen.
+- The app is published on GitHub Pages and rebuilt automatically after every change to `main`.

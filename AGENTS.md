@@ -136,10 +136,19 @@ missing, with a recommendation, and let the people choose.
 - **Product languages:** **German and English**, switchable in the app. Every user-facing text lives in
   `src/i18n/` (one file per language, the English dictionary is type-checked against the German one, so a
   missing text fails the build).
-- **Build and test:** no code yet. Fill in once the tech stack is chosen.
+- **Build and test:** Vite 7 + TypeScript (strict), vanilla TS, no UI framework, no test framework. `npm install`,
+  then `npm run dev` (dev server), `npm run build` (`tsc --noEmit` + `vite build`, output in `dist/`),
+  `npm run preview` (serves `dist/`), `npm run check` (types only). Visual and browser checks are done by hand
+  or with Playwright against `npm run preview`; there are no automated tests yet.
 - **Release:** not defined yet. Fill in once the first version is to be published.
-- **Traps:** none recorded yet.
-- **Repository:** licence GPL-3.0 (`LICENSE`). Version scheme `vMAJOR.MINOR.PATCH`. No CI, no `.gitignore` and
-  no `CHANGELOG.md` yet - add them together with the first code.
+- **Traps:** (1) Saved characters live in `localStorage` (`cutecraft.gallery.v1`, `cutecraft.current.v1`) and are
+  loaded through `migrate()` in `src/core/storage.ts`. Never rename or reuse a parameter `key` from a mode schema
+  (e.g. `src/modes/anime/schema.ts`); add new keys with a default instead, so old saves keep working. (2) Every SVG
+  `id` must come from `ctx.uid()` (prefixed per render), because the gallery shows many SVGs on one page.
+  (3) Figure geometry is computed once in `src/modes/anime/geometry.ts`; positions of hair, clothes and
+  accessories derive from it. New parts must derive from it too, and the extents estimate there (`topExtra`,
+  `halfW`) must be updated so the figure stays inside the picture.
+- **Repository:** licence GPL-3.0 (`LICENSE`). Version scheme `vMAJOR.MINOR.PATCH`. `.gitignore` and
+  `CHANGELOG.md` exist. No CI yet (offer it to the owner).
 - **Limits of the environment:** cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP tools.
   Sessions push to feature branches; merging into `main` only when the owner asks.

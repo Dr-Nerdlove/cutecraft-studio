@@ -2,6 +2,8 @@
 export const de = {
   'app.title': 'CuteCraft Studio',
   'app.tagline': 'Erschaffe deine ganz eigene süße Figur',
+  'header.dark': 'Dunkles Design einschalten',
+  'header.light': 'Helles Design einschalten',
   'header.mode': 'Stil',
   'mode.anime': 'Anime',
 

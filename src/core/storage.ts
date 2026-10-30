@@ -6,6 +6,7 @@ import { allParams, type Params, type ParamDef } from './schema';
 export const GALLERY_KEY = 'cutecraft.gallery.v1';
 export const CURRENT_KEY = 'cutecraft.current.v1';
 export const VIEW_KEY = 'cutecraft.view';
+export const THEME_KEY = 'cutecraft.theme';
 
 export const CURRENT_SCHEMA_VERSION = 1;
 

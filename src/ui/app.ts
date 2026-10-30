@@ -3,6 +3,7 @@ import type { Mode, ViewKind } from '../core/mode';
 import { defaultMode, getMode, modes } from '../core/modes';
 import { VIEW_KEY, loadCurrent, newCharacter, storageGet, storageSet } from '../core/storage';
 import { onLangChange, t, type Key } from '../i18n';
+import { getTheme, onThemeChange, toggleTheme } from './theme';
 import { buildControls, type ControlsHandle } from './controls';
 import { askConfirm, askText, toast } from './dialog';
 import { addToGallery, nextAutoName, openGallery } from './gallery';
@@ -146,7 +147,14 @@ export function mountApp(root: HTMLElement): void {
     });
     modeWrap.appendChild(select);
 
-    actions.append(modeWrap);
+    const themeBtn = h('button', 'theme-btn');
+    themeBtn.type = 'button';
+    const toDark = getTheme() === 'light';
+    themeBtn.textContent = toDark ? '🌙' : '☀️';
+    themeBtn.setAttribute('aria-label', t(toDark ? 'header.dark' : 'header.light'));
+    themeBtn.title = t(toDark ? 'header.dark' : 'header.light');
+    themeBtn.addEventListener('click', toggleTheme);
+    actions.append(modeWrap, themeBtn);
     header.append(brand, actions);
 
     // stage: preview + tools
@@ -192,6 +200,7 @@ export function mountApp(root: HTMLElement): void {
   }
 
   onLangChange(build);
+  onThemeChange(build);
 
   document.addEventListener('keydown', (e) => {
     const target = e.target as HTMLElement | null;

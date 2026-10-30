@@ -12,6 +12,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Added
 
+- Dark mode: follows the system setting, and a button at the top right switches between light and dark (the choice is remembered).
 - Portrait view: a button on the preview zooms in on head and shoulders (and back to the full body), so the face is easy to design at anime proportions. The choice is remembered and used for the PNG export.
 - First version of the web app: a cute 2D character builder with an anime mode (layered SVG drawing).
 - Proportion slider from chibi to anime, plus height, build, shoulders, waist, hips and skin tone.

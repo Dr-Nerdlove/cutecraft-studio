@@ -3,6 +3,8 @@ import type { Dictionary } from './types';
 export const en: Dictionary = {
   'app.title': 'CuteCraft Studio',
   'app.tagline': 'Create your very own cutie',
+  'header.dark': 'Switch to dark mode',
+  'header.light': 'Switch to light mode',
   'header.mode': 'Style',
   'mode.anime': 'Anime',
 

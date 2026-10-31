@@ -70,8 +70,6 @@ export const de = {
   'a.cat.bg': 'Hintergrund',
 
   'a.proportion': 'Proportionen',
-  'a.proportion.min': 'Chibi',
-  'a.proportion.max': 'Anime',
   'a.height': 'Körpergröße',
   'a.build': 'Figur',
   'a.build.min': 'Schlank',

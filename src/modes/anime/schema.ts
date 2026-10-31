@@ -39,7 +39,8 @@ export const animeCategories: readonly Category[] = [
   {
     id: 'body', icon: '🧸', labelKey: 'a.cat.body',
     params: [
-      slider('proportion', 'a.proportion', 0, 100, 1, 35, { minLabelKey: 'a.proportion.min', maxLabelKey: 'a.proportion.max' }),
+      // Hidden for good: kept only so old saves keep the key (migrate() drops unknown keys); drawing ignores it.
+      slider('proportion', 'a.proportion', 0, 100, 1, 100, { showIf: () => false }),
       slider('height', 'a.height', 0, 100, 1, 70),
       slider('build', 'a.build', 0, 100, 1, 40, { minLabelKey: 'a.build.min', maxLabelKey: 'a.build.max' }),
       slider('shoulders', 'a.shoulders', 0, 100, 1, 45),

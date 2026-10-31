@@ -55,7 +55,7 @@ export function randomAnime(): AnimeParams {
   const top = weighted([['tshirt', 1], ['hoodie', 1], ['sailor', 1.2], ['sweater', 1], ['dress', 1.4]] as const);
 
   return {
-    proportion: chance(0.5) ? rnd(0, 40) : rnd(45, 100),
+    proportion: 100,
     height: rnd(35, 100),
     build: rnd(10, 90),
     shoulders: rnd(25, 75),

@@ -70,6 +70,7 @@ export async function openFeedback(source: FeedbackSource): Promise<void> {
     area.maxLength = 2000;
     area.placeholder = t('feedback.placeholder');
     area.setAttribute('aria-label', t('feedback.title'));
+    const dictate = el('p', 'modal-hint', t('feedback.dictate'));
     const hint = el('p', 'modal-hint', t('feedback.hint'));
     const row = el('div', 'modal-actions');
     const cancel = el('button', 'btn ghost', t('dialog.cancel'));
@@ -100,7 +101,7 @@ export async function openFeedback(source: FeedbackSource): Promise<void> {
       }
     });
     row.append(cancel, send);
-    box.append(area, hint, row);
+    box.append(dictate, area, hint, row);
     return area;
   });
 }

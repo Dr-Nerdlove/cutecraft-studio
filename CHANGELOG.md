@@ -12,6 +12,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Added
 
+- Feedback dialog: a tip that the keyboard's microphone key can be used to dictate instead of typing.
 - Feedback button in the header: write a message and share it through the phone's share menu, together with a picture of the character and a settings code that restores it. Without a share menu, the text is copied and the picture is downloaded instead.
 - Dark mode: follows the system setting, and a button at the top right switches between light and dark (the choice is remembered).
 - Portrait view: a button on the preview zooms in on head and shoulders (and back to the full body), so the face is easy to design at anime proportions. The choice is remembered and used for the PNG export.

@@ -12,6 +12,7 @@ export const en: Dictionary = {
   'feedback.title': 'Your feedback',
   'feedback.placeholder': 'What do you like? What is missing? What looks odd?',
   'feedback.hint': 'Your feedback only goes to the person you pick in the share menu. Your picture and settings are sent along.',
+  'feedback.dictate': 'Tip: Instead of typing, tap the microphone on your keyboard and just speak 🎙️',
   'feedback.send': 'Send',
   'feedback.sending': 'Just a moment …',
   'feedback.thanks': 'Thanks for your feedback!',

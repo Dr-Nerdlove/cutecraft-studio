@@ -11,6 +11,7 @@ export const de = {
   'feedback.title': 'Dein Feedback',
   'feedback.placeholder': 'Was gefällt dir? Was fehlt dir? Was ist komisch?',
   'feedback.hint': 'Dein Feedback geht nur an die Person, die du im Teilen-Menü auswählst. Dein Bild und deine Einstellungen werden mitgeschickt.',
+  'feedback.dictate': 'Tipp: Statt zu tippen kannst du auch auf das Mikrofon deiner Tastatur tippen und einfach sprechen 🎙️',
   'feedback.send': 'Senden',
   'feedback.sending': 'Einen Moment …',
   'feedback.thanks': 'Danke für dein Feedback!',

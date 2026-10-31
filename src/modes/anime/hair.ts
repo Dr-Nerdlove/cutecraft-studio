@@ -730,7 +730,7 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
   const { g, p } = ctx;
   const hw = g.hw, s = side, u = g.u;
   const endY = hairEnd(ctx);
-  const y0 = g.yTop + u * 0.52;
+  const y0 = g.yTop + u * 1.0;
   const x0 = s * hw * 0.84;
   const x1 = s * hw * 0.9;
   const len = endY - y0;
@@ -745,8 +745,10 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
     const t = i / (n - 1);
     const cx = lerp(x0, x1, t) + Math.sin(t * Math.PI * 2) * hw * 0.05 * s;
     const cy = y0 + (len - u * 0.1) * t;
-    const rx = hw * 0.22 * (1 - 0.4 * t);
-    const ry = (len / n) * 0.78;
+    // the braid starts thin where the three strands are first crossed and gets full width after a few links
+    const ramp = Math.min(1, 0.4 + 0.2 * i);
+    const rx = hw * 0.22 * (1 - 0.4 * t) * ramp;
+    const ry = (len / n) * 0.78 * (0.75 + 0.25 * ramp);
     const flip = i % 2 === 0 ? 1 : -1;
     d += blobPath(cx, cy, rx, ry, flip * 0.5);
     // local frame of the link: x across (mirrored on every other link), y down
@@ -787,7 +789,7 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
     lightSide(ctx) +
     set.svg(ctx, true) +
     rimLight(ctx, all, len, 0.5);
-  let out = braidRoot(ctx, fills, side, { x: x0, y: y0 - (len / n) * 0.6 }, hw * 0.22, opts);
+  let out = braidRoot(ctx, fills, side, { x: x0, y: y0 - (len / n) * 0.45 }, hw * 0.22 * 0.55, opts);
   out += fade.defs + group(cel(ctx, all, fills.fill, { ...opts, inside }), fade.attrs);
   const tieColor = p.headAcc !== 'none' ? p.headAccColor : '#ff8fb1';
   out += ellipse(tx, ty - u * 0.01, w * 1.35, u * 0.032, { fill: tieColor, stroke: mix(tieColor, '#5a2040', 0.45), 'stroke-width': g.lw * 0.8 });
@@ -795,38 +797,62 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
 }
 
 /**
- * The hair gathered from the side of the head into the braid: a sheaf that narrows from under the side
- * hair down into the first link, with strands converging into it (so the braid grows out of the hair).
+ * Where the braid begins: three separate strands of hair come out from under the side hair and run
+ * together into the thin first link, the inner and outer strand crossing over each other (the start of
+ * the plait). Each strand is wide at the head and narrows towards the braid.
  */
 function braidRoot(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1, start: Pt, w: number, opts: { line: string; shadeColor: string; dx: number; dy: number }): string {
   const { g } = ctx;
   const u = g.u, s = side;
   const m = metrics(ctx);
-  const A: Pt = { x: s * m.rx * 0.5, y: g.yTop + u * 0.12 };
-  const B: Pt = { x: s * m.rx * 1.05, y: m.yc - u * 0.02 };
-  const Bo: Pt = { x: start.x + s * w * 0.9, y: start.y + u * 0.08 };
-  const Bi: Pt = { x: start.x - s * w * 0.9, y: start.y + u * 0.08 };
-  const d =
-    M(A.x, A.y) + Q(s * m.rx * 1.0, g.yTop + u * 0.08, B.x, B.y) +
-    Q(s * m.rx * 1.08, lerp(B.y, Bo.y, 0.6), Bo.x, Bo.y) + L(Bi.x, Bi.y) +
-    Q(s * m.rx * 0.72, lerp(A.y, Bi.y, 0.6), A.x, A.y) + 'Z';
-  const set = new StrandSet();
+  // the strands start under the side hair (which hides their upper ends) and come out below it
+  // beside the face, never over it
+  const ty = g.yTop + u * 0.44;
+  const fw = faceHalfWidthAt(g, ctx.p.faceShape, ty);
+  const A: Pt = { x: s * fw * 0.97, y: ty };
+  const B: Pt = { x: s * Math.min(m.rx * 0.9, fw + g.hw * 0.08), y: ty + u * 0.03 };
   const sw = Math.max(0.45, g.lw * 0.55);
-  for (let j = 0; j < 12; j++) {
-    const f = (j + 0.5) / 12;
-    const r = hash(j * 4.9 + 21);
-    // top end on the arc from A to B, lower end bunched together in the middle of the gathered hair
-    const T: Pt = { x: lerp(A.x, B.x, f), y: lerp(A.y, B.y, f) - Math.sin(Math.PI * f) * u * 0.1 };
-    const E: Pt = { x: lerp(Bi.x, Bo.x, 0.2 + 0.6 * f), y: start.y + u * 0.06 };
-    const Cc: Pt = { x: lerp(T.x, E.x, 0.25) + s * u * 0.03, y: lerp(T.y, E.y, 0.7) };
-    toneStrand(ctx, set, M(T.x, T.y) + Q(Cc.x, Cc.y, E.x, E.y), r, sw * (0.7 + 0.6 * hash(j)));
-  }
-  // darker where it disappears under the side hair and next to the face
-  const inside =
-    shadeOverlay(ctx, start.y, g.yTop, fills.shade, 0.55) +
-    set.svg(ctx, true) +
-    rimLight(ctx, d, u, 0.5);
-  return cel(ctx, d, fills.fill, { ...opts, inside });
+  // [position on the head from A (inner) to B (outer), end offset across the braid start (+ = outer)]
+  const spec: Array<[number, number]> = [[0.95, -0.55], [0.1, 0.6], [0.5, 0.0]];
+  let out = '';
+  spec.forEach(([f, e], k) => {
+    const T: Pt = { x: lerp(A.x, B.x, f), y: lerp(A.y, B.y, f) };
+    const E: Pt = { x: start.x + s * e * w, y: start.y + u * 0.03 };
+    // the strands stay apart for a while and only run together just above the first link
+    const Cc: Pt = { x: lerp(T.x, E.x, 0.2), y: lerp(T.y, E.y, 0.78) };
+    const at = (t: number): Pt => ({
+      x: (1 - t) * (1 - t) * T.x + 2 * (1 - t) * t * Cc.x + t * t * E.x,
+      y: (1 - t) * (1 - t) * T.y + 2 * (1 - t) * t * Cc.y + t * t * E.y,
+    });
+    const halfW = (t: number): number => lerp(u * 0.04, w * 0.45, Math.pow(t, 0.8));
+    const l: Pt[] = [], rr: Pt[] = [];
+    const N = 8;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const P = at(t), Q2 = at(Math.min(1, t + 0.01)), P0 = at(Math.max(0, t - 0.01));
+      const dx = Q2.x - P0.x, dy = Q2.y - P0.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      const hwid = halfW(t);
+      l.push({ x: P.x + nx * hwid, y: P.y + ny * hwid });
+      rr.push({ x: P.x - nx * hwid, y: P.y - ny * hwid });
+    }
+    const d = smoothClosed([...l, ...rr.reverse()]);
+    const set = new StrandSet();
+    for (let j = 0; j < 4; j++) {
+      const o = (j / 3 - 0.5) * 1.4;
+      const r = hash(k * 7.7 + j * 3.1 + 40);
+      const p0 = at(0), p1 = Cc, p2 = at(0.97);
+      const n0 = { x: (l[0].x - rr[rr.length - 1].x) / 2, y: (l[0].y - rr[rr.length - 1].y) / 2 };
+      toneStrand(ctx, set, M(p0.x + n0.x * o, p0.y + n0.y * o) + Q(p1.x + n0.x * o * 0.6, p1.y + n0.y * o * 0.6, p2.x + n0.x * o * 0.15, p2.y + n0.y * o * 0.15), r, sw * (0.7 + 0.6 * hash(j + k)));
+    }
+    const inside =
+      shadeOverlay(ctx, E.y, T.y, fills.shade, 0.5) +
+      set.svg(ctx, true) +
+      rimLight(ctx, d, u, 0.45);
+    out += cel(ctx, d, fills.fill, { ...opts, inside });
+  });
+  return out;
 }
 
 /** Both buns in the soft style: hair wound around the centre, darker underneath, a sheen and rim light. */

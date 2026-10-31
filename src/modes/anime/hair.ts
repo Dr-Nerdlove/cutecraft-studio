@@ -736,6 +736,16 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
   const len = endY - y0;
   const n = Math.max(5, Math.round(len / (u * 0.12)));
   const opts = { line: ctx.hairLine, shadeColor: ctx.hairShade, dx: -g.lw * 1.4, dy: -g.lw * 0.9 };
+  // beside the face the braid must not show on the face side: up to the tip of the side lock it is
+  // hidden under the lock, below it (down to the chin) its inner edge stays outside the face edge
+  const lockTip = sideLock(ctx).tipY;
+  const braidX = (t: number, cy: number, rx: number, ry: number): number => {
+    const x = lerp(x0, x1, t) + Math.sin(t * Math.PI * 2) * hw * 0.05 * s;
+    const yLow = cy + ry * 0.5;
+    if (yLow < lockTip || cy - ry > g.yChin) return x;
+    const need = faceHalfWidthAt(g, p.faceShape, Math.min(yLow, g.yChin)) + rx * 0.95;
+    return Math.abs(x) < need ? s * need : x;
+  };
   let d = '';
   let grooves = '';
   let gloss = '';
@@ -743,10 +753,10 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
   const sw = Math.max(0.45, g.lw * 0.55);
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1);
-    const cx = lerp(x0, x1, t) + Math.sin(t * Math.PI * 2) * hw * 0.05 * s;
     const cy = y0 + (len - u * 0.1) * t;
     const rx = hw * 0.22 * (1 - 0.4 * t);
     const ry = (len / n) * 0.78;
+    const cx = braidX(t, cy, rx, ry);
     const flip = i % 2 === 0 ? 1 : -1;
     d += blobPath(cx, cy, rx, ry, flip * 0.5);
     // local frame of the link: x across (mirrored on every other link), y down
@@ -787,8 +797,12 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
     lightSide(ctx) +
     set.svg(ctx, true) +
     rimLight(ctx, all, len, 0.5);
-  let out = braidRoot(ctx, fills, side, { x: x0, y: y0 - (len / n) * 0.45 }, hw * 0.22, opts);
+  let out = braidRoot(ctx, fills, side, { x: braidX(0, y0, hw * 0.22, (len / n) * 0.78), y: y0 - (len / n) * 0.45 }, hw * 0.22, opts);
   out += fade.defs + group(cel(ctx, all, fills.fill, { ...opts, inside }), fade.attrs);
+  // never over the face (the ends of the side hair fade out and would let it show through)
+  const noFace = ctx.uid('bnf');
+  const big = `M${-hw * 6} ${g.yTop - u * 3}H${hw * 6}V${g.yTop + u * 12}H${-hw * 6}Z`;
+  out = `<clipPath id="${noFace}">${path(big + ctx.faceD, { 'clip-rule': 'evenodd' })}</clipPath>` + group(out, { 'clip-path': `url(#${noFace})` });
   const tieColor = p.headAcc !== 'none' ? p.headAccColor : '#ff8fb1';
   out += ellipse(tx, ty - u * 0.01, w * 1.35, u * 0.032, { fill: tieColor, stroke: mix(tieColor, '#5a2040', 0.45), 'stroke-width': g.lw * 0.8 });
   return out;
@@ -807,7 +821,7 @@ function braidRoot(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -
   // a short run from under the side hair to about ear height; beside the face, never over it
   const ty = g.yTop + u * 0.3;
   const fw = faceHalfWidthAt(g, ctx.p.faceShape, ty);
-  const A: Pt = { x: s * Math.max(fw * 0.97, Math.abs(start.x) - w * 0.9), y: ty };
+  const A: Pt = { x: s * Math.max(fw + w * 0.4, Math.abs(start.x) - w * 0.9), y: ty };
   const B: Pt = { x: s * Math.min(m.rx * 0.9, Math.abs(start.x) + w * 0.9), y: ty + u * 0.04 };
   const sw = Math.max(0.45, g.lw * 0.55);
   // [position on the head from A (inner) to B (outer), end offset across the braid start (+ = outer)]

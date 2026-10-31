@@ -7,23 +7,6 @@ import type { AnimeParams } from './schema';
 // ---- shared helpers ---------------------------------------------------------------------------
 
 /**
- * Hair that ends in pointed locks. `tips` run left to right; between two tips the outline rises
- * to a sharp cusp, so every lock looks like a leaf. The path continues from tips[0].
- */
-function locks(tips: Pt[], depth: number, up = true): string {
-  let d = '';
-  for (let i = 0; i < tips.length - 1; i++) {
-    const A = tips[i], B = tips[i + 1];
-    const dirY = up ? -1 : 1;
-    const V: Pt = { x: (A.x + B.x) / 2, y: (up ? Math.min(A.y, B.y) : Math.max(A.y, B.y)) + dirY * depth };
-    const dx1 = V.x - A.x, dx2 = B.x - V.x;
-    d += C(A.x + dx1 * 0.62, A.y + (V.y - A.y) * 0.1, V.x - dx1 * 0.05, V.y - (V.y - A.y) * 0.5, V.x, V.y);
-    d += C(V.x + dx2 * 0.05, V.y + (B.y - V.y) * 0.5, B.x - dx2 * 0.62, B.y + (V.y - B.y) * 0.1, B.x, B.y);
-  }
-  return d;
-}
-
-/**
  * Bangs: every lock ends in a sharp point (steep edges at the tip, narrow gaps between locks), so the
  * fringe reads as anime hair instead of a row of round drops. Same shape contract as `locks`.
  */
@@ -66,19 +49,6 @@ function shadeOverlay(ctx: Ctx, y0: number, y1: number, color: string, opacity: 
     `<stop offset="0" stop-color="${color}" stop-opacity="0"/><stop offset="1" stop-color="${color}" stop-opacity="${opacity}"/></linearGradient>` +
     `<rect x="-900" y="${(y0 - 600).toFixed(1)}" width="1800" height="${(y1 - y0 + 1600).toFixed(1)}" fill="url(#${id})"/>`
   );
-}
-
-/** Slightly curved strand lines running down from y0 to y1 at the given x positions (fractions of `half`). */
-function strandLines(ctx: Ctx, xs: number[], half: number, y0: number, y1: number, bow: number, color: string, w: number, opacity: number): string {
-  let out = '';
-  xs.forEach((f, i) => {
-    const x0 = f * half * 0.8;
-    const x1 = f * half * (1 + bow * (i % 2 ? 0.7 : 1));
-    const ya = y0 + (i % 3) * (y1 - y0) * 0.05;
-    const yb = y1 - ((i + 1) % 3) * (y1 - y0) * 0.06;
-    out += stroke(ctx, `${M(x0, ya)}${Q(f * half * (1 + bow * 0.4), (ya + yb) / 2, x1, yb)}`, color, w, { opacity });
-  });
-  return out;
 }
 
 /** A crescent-shaped shine band following the crown (the anime "angel ring"). t0..t1 pick a part of the arc. */
@@ -197,7 +167,213 @@ function hairFills(ctx: Ctx): { defs: string; fill: string; shade: string } {
 
 // ---- back hair --------------------------------------------------------------------------------
 
-function backMass(ctx: Ctx): { d: string; yEnd: number } {
+/**
+ * Hair ends as slim, pointed locks: steep edges at every tip and a shallow notch between two tips
+ * (`depths[i]` is the notch above the shorter tip of lock i). Tips run left to right.
+ */
+function taperLocks(tips: Pt[], depths: number[]): string {
+  let d = '';
+  for (let i = 0; i < tips.length - 1; i++) {
+    const A = tips[i], B = tips[i + 1];
+    const V: Pt = { x: (A.x + B.x) / 2, y: Math.min(A.y, B.y) - depths[i] };
+    const dx1 = V.x - A.x, dx2 = B.x - V.x;
+    const dy1 = V.y - A.y, dy2 = B.y - V.y;
+    d += C(A.x + dx1 * 0.05, A.y + dy1 * 0.45, V.x - dx1 * 0.34, V.y - dy1 * 0.08, V.x, V.y);
+    d += C(V.x + dx2 * 0.34, V.y + dy2 * 0.08, B.x - dx2 * 0.05, B.y - dy2 * 0.45, B.x, B.y);
+  }
+  return d;
+}
+
+interface TipSpec {
+  /** Count of tips including the two outer corners. */
+  n: number;
+  /** How much shorter than the longest lock a tip may be, in head heights. */
+  varLen: number;
+  /** Sideways wander of the tips, as a fraction of the lock spacing. */
+  lean: number;
+  /** Notch depth between tips, in head heights. */
+  depth: number;
+  salt: number;
+}
+
+/** Tips of uneven length, from `from` (left corner) to `to` (right corner), around the line y = yEnd. */
+function unevenTips(ctx: Ctx, from: Pt, to: Pt, yEnd: number, spec: TipSpec, wave = 0): { tips: Pt[]; depths: number[] } {
+  const u = ctx.g.u;
+  const tips: Pt[] = [from];
+  const spacing = (to.x - from.x) / (spec.n - 1);
+  for (let i = 1; i < spec.n - 1; i++) {
+    const f = i / (spec.n - 1);
+    // alternate long / short locks and add a random part, so the row never looks like a comb
+    const short = (i % 2 ? 0.55 : 0) + 0.45 * hash(i * 3.7 + spec.salt);
+    const len = u * (0.035 - spec.varLen * short) + (wave ? Math.sin(f * 6) * u * 0.03 : 0);
+    const x = lerp(from.x, to.x, f) + (hash(i * 5.3 + spec.salt) - 0.5) * 2 * spacing * spec.lean;
+    tips.push({ x, y: yEnd + len });
+  }
+  tips.push(to);
+  const depths = tips.slice(1).map((_, i) => u * spec.depth * (0.75 + 0.5 * hash(i * 2.1 + spec.salt + 9)));
+  return { tips, depths };
+}
+
+/** Mask that makes the lowest part of a hair part slightly see-through (the ends fade out). */
+function endFade(ctx: Ctx, yEnd: number, reach: number, end = '#808080'): { defs: string; attrs: Record<string, string> } {
+  const { g } = ctx;
+  const id = ctx.uid('efade');
+  const gid = ctx.uid('efadeg');
+  const x = -g.hw * 6, w = g.hw * 12;
+  const y = g.yTop - g.u * 3, h = yEnd - g.yTop + g.u * 6;
+  return {
+    defs:
+      `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="${(yEnd - reach).toFixed(1)}" x2="0" y2="${(yEnd + g.u * 0.05).toFixed(1)}">` +
+      `<stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="${end}"/></linearGradient>` +
+      `<mask id="${id}" maskUnits="userSpaceOnUse" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}">` +
+      `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="url(#${gid})"/></mask>`,
+    attrs: { mask: `url(#${id})` },
+  };
+}
+
+/** A thin curved sliver, widest at its base and pointed at the end: one loose strand of hair. */
+function wispD(b: Pt, e: Pt, bend: number, w: number): string {
+  const dx = e.x - b.x, dy = e.y - b.y;
+  const l = Math.hypot(dx, dy) || 1;
+  const nx = -dy / l, ny = dx / l;
+  const c: Pt = { x: (b.x + e.x) / 2 + nx * bend, y: (b.y + e.y) / 2 + ny * bend };
+  return (
+    M(b.x - nx * w, b.y - ny * w) + Q(c.x - nx * w * 0.5, c.y - ny * w * 0.5, e.x, e.y) +
+    Q(c.x + nx * w * 0.5, c.y + ny * w * 0.5, b.x + nx * w, b.y + ny * w) + 'Z'
+  );
+}
+
+/** Draws curves in tone groups (one path per tone and width), so many strands stay cheap. */
+class StrandSet {
+  private groups = new Map<string, { color: string; w: number; op: number; d: string }>();
+  add(d: string, color: string, w: number, op: number): void {
+    const key = `${color}|${w.toFixed(2)}|${op}`;
+    const e = this.groups.get(key);
+    if (e) e.d += d;
+    else this.groups.set(key, { color, w, op, d });
+  }
+  /** All strands; with `glow` the light ones are also drawn wide and blurred (one filtered group). */
+  svg(ctx: Ctx, glow = false): string {
+    let out = '';
+    let halo = '';
+    for (const e of this.groups.values()) {
+      out += stroke(ctx, e.d, e.color, e.w, { opacity: e.op });
+      if (glow && e.color !== ctx.hairShade && e.op >= 0.35 && (e.color === ctx.hairLight || e.color === ctx.hairRim)) halo += stroke(ctx, e.d, e.color, e.w * 3.2, { opacity: e.op * 0.45 });
+    }
+    return (halo ? group(halo, { filter: `url(#${ctx.soft})` }) : '') + out;
+  }
+}
+
+/** Interpolates y along a polyline of points sorted by x. */
+function polyY(pts: Pt[], x: number): number {
+  if (x <= pts[0].x) return pts[0].y;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const A = pts[i], B = pts[i + 1];
+    if (x <= B.x) return lerp(A.y, B.y, (x - A.x) / Math.max(1e-6, B.x - A.x));
+  }
+  return pts[pts.length - 1].y;
+}
+
+/**
+ * Fine single strands flowing down the back hair (dark, light and warm back-lit ones), converging
+ * into the lock tips at the bottom. Light strands sit mostly on the lit left, dark ones on the right.
+ */
+function backStrands(ctx: Ctx, bm: BackMass, m: HairMetrics, count: number): string {
+  const { g } = ctx;
+  const u = g.u, hw = g.hw;
+  const set = new StrandSet();
+  const y0 = m.yc + u * 0.02;
+  const sw = Math.max(0.45, g.lw * 0.65);
+  const tipsEnd = bm.tips;
+  for (let j = 0; j < count; j++) {
+    const r = hash(j * 1.9 + 4);
+    const r2 = hash(j * 7.1 + 1);
+    const f = clamp(-0.97 + 1.94 * ((j + 0.5 * r) / count), -0.97, 0.97);
+    const ys = y0 + r2 * u * 0.35;
+    const xAt = (y: number): number => f * bm.half(y);
+    const nearest = tipsEnd.reduce((a, b) => (Math.abs(b.x - xAt(bm.yEnd)) < Math.abs(a.x - xAt(bm.yEnd)) ? b : a));
+    const xe = lerp(xAt(bm.yEnd), nearest.x, 0.55);
+    const ye = Math.min(polyY(tipsEnd, xe), bm.yEnd + u * 0.03) - u * (0.02 + 0.1 * r);
+    const pts: Pt[] = [];
+    for (const t of [0, 0.3, 0.6, 0.85, 1]) {
+      const y = lerp(ys, ye, t);
+      const wob = Math.sin(t * 4 + j * 1.7) * hw * 0.012;
+      pts.push({ x: lerp(xAt(y), xe, Math.pow(t, 3)) + wob, y });
+    }
+    const d = M(pts[0].x, pts[0].y) + curveThroughOpen(pts);
+    const left = f < 0;
+    const pick = (hash(j * 3.3 + 8) + (left ? 0.25 : -0.25));
+    if (pick > 0.62) set.add(d, ctx.hairLight, sw * (0.8 + r), left ? 0.55 : 0.4);
+    else if (pick > 0.3) set.add(d, ctx.hairRim, sw * 0.7, left ? 0.45 : 0.28);
+    else set.add(d, darken(ctx.hairShade, 0.06), sw * (0.7 + r), left ? 0.4 : 0.55);
+  }
+  return set.svg(ctx, true);
+}
+
+const curveThroughOpen = (pts: Pt[]): string => smoothOpen(pts, 1 / 6, false);
+
+/**
+ * Loose single hairs: slim slivers poking out past the ends of some locks and the outer sides.
+ * Drawn behind the hair mass so only the part outside shows.
+ */
+function looseStrands(ctx: Ctx, bm: BackMass, fill: string): string {
+  const { g } = ctx;
+  const u = g.u, hw = g.hw;
+  let d = '';
+  const w = Math.max(0.45, g.lw * 0.5);
+  // past the ends: from inside a lock, a little beyond its tip, drifting sideways
+  bm.tips.forEach((t, i) => {
+    if (i === 0 || i === bm.tips.length - 1 || hash(i * 4.4 + 2) < 0.4) return;
+    const s = hash(i * 1.3) < 0.5 ? -1 : 1;
+    const b: Pt = { x: t.x - s * hw * 0.03, y: t.y - u * 0.16 };
+    const e: Pt = { x: t.x + s * hw * (0.1 + 0.1 * hash(i * 6.1)), y: t.y + u * (0.06 + 0.1 * hash(i * 2.9)) };
+    d += wispD(b, e, s * hw * 0.05, w);
+  });
+  // out of the sides: lifting off the outer edge and falling back down
+  for (const s of [-1, 1] as const) {
+    for (const f of [0.3, 0.62, 0.85]) {
+      const y = lerp(m0(bm), bm.yEnd, f);
+      const edge = bm.half(y);
+      const b: Pt = { x: s * (edge - hw * 0.08), y: y - u * 0.04 };
+      const e: Pt = { x: s * (edge + hw * (0.12 + 0.1 * hash(f * 50 + s))), y: y + u * (0.1 + 0.08 * hash(f * 30 + s)) };
+      d += wispD(b, e, s * hw * 0.06, w);
+    }
+  }
+  return path(d, { fill, opacity: 0.8 });
+}
+
+const m0 = (bm: BackMass): number => bm.left[0].y;
+
+/** Warm back light along the outer side edges of the back hair, fading towards the ends. */
+function backRim(ctx: Ctx, bm: BackMass): string {
+  const { g } = ctx;
+  const gid = (a: number, b: number): string => {
+    const id = ctx.uid('brim');
+    ctxDefs += `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${m0(bm).toFixed(1)}" x2="0" y2="${bm.yEnd.toFixed(1)}">` +
+      `<stop offset="0" stop-color="${ctx.hairRim}" stop-opacity="${a}"/><stop offset="1" stop-color="${ctx.hairRim}" stop-opacity="${b}"/></linearGradient>`;
+    return id;
+  };
+  let ctxDefs = '';
+  const idL = gid(0.9, 0.3);
+  const idR = gid(0.4, 0.1);
+  const wRim = (g.u * 0.05).toFixed(2);
+  const edgeL = path(smoothOpen(bm.left), { fill: 'none', stroke: `url(#${idL})`, 'stroke-width': wRim });
+  const edgeR = path(smoothOpen(bm.right.slice().reverse()), { fill: 'none', stroke: `url(#${idR})`, 'stroke-width': wRim });
+  return ctxDefs + group(edgeL + edgeR, { filter: `url(#${ctx.soft})` });
+}
+
+interface BackMass {
+  d: string;
+  yEnd: number;
+  /** Outer edge points, top to bottom (left) and bottom to top (right). */
+  left: Pt[];
+  right: Pt[];
+  tips: Pt[];
+  /** Half width of the mass at height y. */
+  half(y: number): number;
+}
+
+function backMass(ctx: Ctx): BackMass {
   const { g, p } = ctx;
   const m = metrics(ctx);
   const hw = g.hw;
@@ -205,18 +381,21 @@ function backMass(ctx: Ctx): { d: string; yEnd: number } {
   const yEnd = massEnd(ctx);
   let wTop = hw * 1.14;
   let wEnd = hw * 1.05;
-  let nTips = 6;
   let wave = 0;
   let inward = 0;
-  if (style === 'bob' || style === 'sidetail' || style === 'braid') { wTop = hw * 1.2; wEnd = hw * 1.12; inward = hw * 0.08; }
-  if (style === 'messy') { wTop = hw * 1.2; wEnd = hw * 1.1; nTips = 7; inward = hw * 0.04; }
+  const spec: TipSpec = { n: 7, varLen: 0.1, lean: 0.25, depth: 0.075, salt: 1 };
+  if (style === 'bob' || style === 'sidetail' || style === 'braid') { wTop = hw * 1.2; wEnd = hw * 1.12; inward = hw * 0.08; spec.n = 8; spec.varLen = 0.09; }
+  if (style === 'messy') { wTop = hw * 1.2; wEnd = hw * 1.1; inward = hw * 0.04; spec.n = 8; spec.varLen = 0.16; spec.depth = 0.12; spec.lean = 0.35; }
   if (isLong(p)) {
     wTop = hw * 1.16;
     wEnd = Math.max(hw * 1.1, g.shHW * 0.95);
-    nTips = style === 'hime' ? 3 : 7;
+    spec.n = 9;
+    spec.varLen = 0.14;
+    spec.depth = 0.09;
     if (style === 'wavy') wave = hw * 0.1;
+    if (style === 'hime') { spec.n = 7; spec.varLen = 0.05; spec.depth = 0.035; spec.lean = 0.1; }
   }
-  if (style === 'short' || style === 'buns' || style === 'ponytail' || style === 'twintails' || style === 'drills') { wTop = hw * 1.12; wEnd = hw * 1.0; nTips = 5; }
+  if (style === 'short' || style === 'buns' || style === 'ponytail' || style === 'twintails' || style === 'drills') { wTop = hw * 1.12; wEnd = hw * 1.0; spec.n = 6; spec.varLen = 0.08; }
 
   const y0 = m.yc;
   const left: Pt[] = [];
@@ -228,54 +407,61 @@ function backMass(ctx: Ctx): { d: string; yEnd: number } {
     const w = base + (wave ? Math.sin(f * Math.PI * 3.2) * wave * f : 0);
     left.push({ x: -w, y });
   }
+  // the outer corner ends a little above the longest lock
+  left[n].y = yEnd - g.u * spec.varLen * 0.4;
   const right = left.map((q) => ({ x: -q.x, y: q.y })).reverse();
 
-  // pointed bottom
-  const tips: Pt[] = [];
-  const wb = left[left.length - 1].x;
-  for (let i = 0; i < nTips; i++) {
-    const f = i / (nTips - 1);
-    const x = lerp(wb, -wb, f);
-    const bump = (i % 2 === 0 ? 0 : -g.u * (style === 'messy' ? 0.1 : 0.045)) + (wave ? Math.sin(f * 6) * g.u * 0.03 : 0);
-    const edgeIn = Math.sin(f * Math.PI);
-    const blunt = style === 'hime';
-    tips.push({ x: x * (1 - inward / Math.max(1, Math.abs(wb)) * (1 - edgeIn)), y: yEnd + (blunt ? 0 : bump + (1 - edgeIn) * g.u * 0.02) });
+  // pointed bottom: slim locks of uneven length
+  const wb = left[n].x;
+  const { tips, depths } = unevenTips(ctx, left[n], right[0], yEnd, spec, wave);
+  for (let i = 1; i < tips.length - 1; i++) {
+    const edgeIn = Math.sin((i / (tips.length - 1)) * Math.PI);
+    tips[i].x *= 1 - (inward / Math.max(1, Math.abs(wb))) * (1 - edgeIn);
   }
-  tips[0] = left[left.length - 1];
-  tips[tips.length - 1] = { x: -left[left.length - 1].x, y: left[left.length - 1].y };
 
   const arcTop = skullArc(g, m.rx, m.yc, m.vTop, 0, Math.PI, 12);
   const d =
     M(left[0].x, left[0].y) + smoothOpen([...left.slice(0, -1), tips[0]], 1 / 6, false) +
-    locks(tips, g.u * (style === 'hime' ? 0.014 : style === 'messy' ? 0.13 : 0.08), true) +
+    taperLocks(tips, depths) +
     smoothOpen([tips[tips.length - 1], ...right.slice(1)], 1 / 6, false) +
     smoothOpen(arcTop, 1 / 6, false) + 'Z';
-  return { d, yEnd };
+  const half = (y: number): number => {
+    if (y <= left[0].y) return -left[0].x;
+    for (let i = 0; i < left.length - 1; i++) {
+      if (y <= left[i + 1].y) return -lerp(left[i].x, left[i + 1].x, (y - left[i].y) / Math.max(1e-6, left[i + 1].y - left[i].y));
+    }
+    return -left[n].x;
+  };
+  return { d, yEnd, left, right, tips, half };
 }
 
-function tailPath(ctx: Ctx, side: 1 | -1, tie: Pt, endY: number, sway: number): string {
+/** Outline of a hanging tail and its lock tips (used for strands and loose hairs). */
+function tailGeo(ctx: Ctx, side: 1 | -1, tie: Pt, endY: number, sway: number): { d: string; tips: Pt[] } {
   const { g } = ctx;
-  const hw = g.hw;
+  const hw = g.hw, u = g.u;
   const s = side;
   const len = endY - tie.y;
   const tipC: Pt = { x: tie.x + s * hw * sway, y: endY };
-  const wEnd = hw * 0.34;
-  const Tout: Pt = { x: tie.x + s * hw * 0.18, y: tie.y - g.u * 0.02 };
-  const Tin: Pt = { x: tie.x - s * hw * 0.16, y: tie.y + g.u * 0.03 };
+  const wEnd = hw * 0.38;
+  const Tout: Pt = { x: tie.x + s * hw * 0.18, y: tie.y - u * 0.02 };
+  const Tin: Pt = { x: tie.x - s * hw * 0.16, y: tie.y + u * 0.03 };
+  // slim, uneven locks from the outer to the inner side
   const tips: Pt[] = [
-    { x: tipC.x + s * wEnd, y: endY - g.u * 0.04 },
-    { x: tipC.x, y: endY + g.u * 0.05 },
-    { x: tipC.x - s * wEnd, y: endY - g.u * 0.02 },
+    { x: tipC.x + s * wEnd, y: endY - u * 0.07 },
+    { x: tipC.x + s * wEnd * 0.4, y: endY + u * 0.04 },
+    { x: tipC.x - s * wEnd * 0.2, y: endY - u * 0.02 },
+    { x: tipC.x - s * wEnd * 0.62, y: endY + u * 0.07 },
+    { x: tipC.x - s * wEnd, y: endY - u * 0.06 },
   ];
-  // outer edge (away from the head), then the lock tips, then the inner edge back up
+  const depths = [0.08, 0.09, 0.07, 0.08].map((v) => v * u);
   const outerEnd = tips[0];
-  const innerEnd = tips[2];
+  const innerEnd = tips[tips.length - 1];
   let d = M(Tout.x, Tout.y);
   d += C(tie.x + s * hw * (0.55 + sway * 0.55), tie.y + len * 0.04, tipC.x + s * hw * (0.5 + sway * 0.25), tie.y + len * 0.5, outerEnd.x, outerEnd.y);
-  d += locks(tips, g.u * 0.1, true);
+  d += taperLocks(tips, depths);
   d += C(innerEnd.x - s * hw * 0.2, endY - len * 0.4, tie.x - s * hw * 0.42, tie.y + len * 0.3, Tin.x, Tin.y);
-  d += Q(tie.x - s * hw * 0.02, tie.y - g.u * 0.045, Tout.x, Tout.y) + 'Z';
-  return d;
+  d += Q(tie.x - s * hw * 0.02, tie.y - u * 0.045, Tout.x, Tout.y) + 'Z';
+  return { d, tips };
 }
 
 function bunPath(cx: number, cy: number, r: number): string {
@@ -317,20 +503,37 @@ function messyTufts(ctx: Ctx, fills: { fill: string }, opts: { line: string; sha
   return out;
 }
 
-/** Strand lines, shade and a shine stripe for a hanging tail (shared by tails and the side ponytail). */
+/**
+ * Shade and many fine strands for a hanging tail (shared by tails and the side ponytail). The strands
+ * run between the two edges of the tail and converge into the lock tips.
+ */
 function tailFinish(ctx: Ctx, fills: { shade: string }, side: 1 | -1, tie: Pt, endY: number, sway: number): string {
   const { g } = ctx;
-  const hw = g.hw, s = side;
+  const hw = g.hw, s = side, u = g.u;
   const len = endY - tie.y;
-  const tipX = tie.x + s * hw * sway;
-  const line = (off: number, color: string, w: number, op: number): string =>
-    stroke(ctx, `${M(tie.x + s * hw * off * 0.4, tie.y + len * 0.02)}${Q(tie.x + s * hw * (0.45 + sway * 0.45 + off), tie.y + len * 0.5, tipX + s * hw * off * 0.6, endY - g.u * 0.02)}`, color, w, { opacity: op });
-  return (
-    shadeOverlay(ctx, tie.y, endY, fills.shade, 0.5) +
-    line(-0.12, ctx.hairShade, Math.max(0.7, g.lw * 0.7), 0.45) +
-    line(0.1, ctx.hairShade, Math.max(0.7, g.lw * 0.7), 0.4) +
-    line(-0.03, ctx.hairLight, Math.max(1, g.lw * 1.3), 0.4)
-  );
+  const tipC: Pt = { x: tie.x + s * hw * sway, y: endY };
+  const wEnd = hw * 0.38;
+  const outer = { p0: { x: tie.x + s * hw * 0.18, y: tie.y - u * 0.02 }, p1: { x: tie.x + s * hw * (0.55 + sway * 0.55), y: tie.y + len * 0.04 }, p2: { x: tipC.x + s * hw * (0.5 + sway * 0.25), y: tie.y + len * 0.5 }, p3: { x: tipC.x + s * wEnd, y: endY - u * 0.07 } };
+  const inner = { p0: { x: tie.x - s * hw * 0.16, y: tie.y + u * 0.03 }, p1: { x: tie.x - s * hw * 0.42, y: tie.y + len * 0.3 }, p2: { x: tipC.x - s * wEnd - s * hw * 0.2, y: endY - len * 0.4 }, p3: { x: tipC.x - s * wEnd, y: endY - u * 0.06 } };
+  const mixP = (a: Pt, b: Pt, f: number): Pt => ({ x: lerp(a.x, b.x, f), y: lerp(a.y, b.y, f) });
+  const set = new StrandSet();
+  const sw = Math.max(0.45, g.lw * 0.65);
+  const N = 18;
+  for (let j = 0; j < N; j++) {
+    const f = (j + 0.5 + (hash(j * 2.3) - 0.5) * 0.6) / N;
+    const r = hash(j * 1.9 + 6);
+    // shorten the end of the strand towards its control point, so the ends differ in length
+    const k = 0.04 + 0.2 * r;
+    const P0 = mixP(outer.p0, inner.p0, f), P1 = mixP(outer.p1, inner.p1, f), P2 = mixP(outer.p2, inner.p2, f), P3 = mixP(outer.p3, inner.p3, f);
+    const E = mixP(P3, P2, k);
+    const d = `${M(P0.x, P0.y)}${C(P1.x, P1.y, P2.x, P2.y, E.x, E.y)}`;
+    // the side facing the head (inner) is in shadow, the outer side catches the light
+    const pick = hash(j * 3.1 + 2) + (0.5 - f) * 0.5;
+    if (pick > 0.62) set.add(d, ctx.hairLight, sw * (0.8 + r), 0.5);
+    else if (pick > 0.4) set.add(d, ctx.hairRim, sw * 0.7, 0.35);
+    else set.add(d, darken(ctx.hairShade, 0.06), sw * (0.7 + r), 0.5);
+  }
+  return shadeOverlay(ctx, tie.y, endY, fills.shade, 0.5) + set.svg(ctx, true);
 }
 
 /** One drill curl: a stack of tilted, shrinking coils hanging from the tie. */
@@ -390,6 +593,22 @@ function braidSvg(ctx: Ctx, fills: { fill: string }, side: 1 | -1): string {
   return out;
 }
 
+/** One hanging tail: loose hairs behind, the shaded shape with strands and rim light, fading at the ends. */
+function tailSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1, tie: Pt, endY: number, sway: number, opts: { line: string; shadeColor: string; dx: number; dy: number }): string {
+  const { g } = ctx;
+  const { d, tips } = tailGeo(ctx, side, tie, endY, sway);
+  const fade = endFade(ctx, endY, Math.min(g.u * 0.3, (endY - tie.y) * 0.3));
+  // loose hairs poking out past the tips
+  let loose = '';
+  tips.forEach((t, i) => {
+    if (i === 0 || i === tips.length - 1 || i % 2 === 0) return;
+    const sd = i === 1 ? side : -side;
+    loose += wispD({ x: t.x - sd * g.hw * 0.03, y: t.y - g.u * 0.14 }, { x: t.x + sd * g.hw * 0.1, y: t.y + g.u * (0.07 + 0.04 * i) }, sd * g.hw * 0.05, Math.max(0.45, g.lw * 0.5));
+  });
+  const inside = tailFinish(ctx, fills, side, tie, endY, sway) + rimLight(ctx, d, endY - g.yTop);
+  return fade.defs + path(loose, { fill: fills.fill, opacity: 0.8 }) + group(cel(ctx, d, fills.fill, { ...opts, inside }), fade.attrs);
+}
+
 export function hairBackSvg(ctx: Ctx): string {
   const { g, p } = ctx;
   const fills = hairFills(ctx);
@@ -405,14 +624,13 @@ export function hairBackSvg(ctx: Ctx): string {
   if (p.hairBack === 'ponytail') {
     const t: Pt = { x: hw * 0.74, y: g.yTop + g.u * 0.12 };
     const endY = hairEnd(ctx);
-    out += cel(ctx, tailPath(ctx, 1, t, endY, 0.72), fills.fill, { ...opts, inside: tailFinish(ctx, fills, 1, t, endY, 0.72) });
+    out += tailSvg(ctx, fills, 1, t, endY, 0.72, opts);
     out += tie(t.x + hw * 0.02, t.y + g.u * 0.01, hw * 0.2, g.u * 0.045, -25);
   } else if (p.hairBack === 'twintails') {
     const endY = hairEnd(ctx);
     for (const s of [-1, 1] as const) {
       const t: Pt = { x: s * hw * 0.9, y: g.yTop + g.u * 0.22 };
-      const sway = lerp(0.45, 0.65, L01);
-      out += cel(ctx, tailPath(ctx, s, t, endY, sway), fills.fill, { ...opts, inside: tailFinish(ctx, fills, s, t, endY, sway) });
+      out += tailSvg(ctx, fills, s, t, endY, lerp(0.45, 0.65, L01), opts);
       out += tie(t.x + s * hw * 0.02, t.y + g.u * 0.01, hw * 0.17, g.u * 0.04, s * 25);
     }
   } else if (p.hairBack === 'messy') {
@@ -437,8 +655,9 @@ export function hairBackSvg(ctx: Ctx): string {
     }
   }
 
-  const { d, yEnd } = backMass(ctx);
+  const bm = backMass(ctx);
   const m = metrics(ctx);
+  const { d, yEnd } = bm;
   const faceShadow = path(ctx.faceD, {
     fill: mix(ctx.hairShade, '#000000', 0.12),
     stroke: mix(ctx.hairShade, '#000000', 0.12),
@@ -447,16 +666,18 @@ export function hairBackSvg(ctx: Ctx): string {
     opacity: 0.55,
     transform: `translate(0 ${g.u * 0.045})`,
   });
+  const strandCount = Math.round(clamp(26 + ((yEnd - m.yc) / g.u) * 7, 26, 56));
   const inside =
     faceShadow +
     shadeOverlay(ctx, m.yc, yEnd, ctx.hairShade, 0.55) +
-    strandLines(ctx, [-0.88, -0.64, -0.4, 0.4, 0.64, 0.88], hw * 1.1, m.yc + g.u * 0.1, yEnd - g.u * 0.04, 0.12, ctx.hairShade, Math.max(0.7, g.lw * 0.7), 0.4) +
-    strandLines(ctx, [-0.76, -0.52, 0.52, 0.76], hw * 1.1, m.yc + g.u * 0.15, yEnd - g.u * 0.2, 0.1, ctx.hairLight, Math.max(0.8, g.lw * 0.8), 0.35) +
-    strandLines(ctx, [-0.96, -0.82, -0.7, -0.58, -0.46, 0.46, 0.58, 0.7, 0.82, 0.96], hw * 1.1, m.yc + g.u * 0.05, yEnd - g.u * 0.08, 0.14, ctx.hairShade, Math.max(0.3, g.lw * 0.4), 0.35) +
-    strandLines(ctx, [-0.9, -0.64, -0.5, 0.5, 0.64, 0.9], hw * 1.1, m.yc + g.u * 0.2, yEnd - g.u * 0.3, 0.12, ctx.hairRim, Math.max(0.3, g.lw * 0.4), 0.3) +
     lightSide(ctx) +
-    rimLight(ctx, d);
-  out += cel(ctx, d, fills.fill, { ...opts, inside });
+    backStrands(ctx, bm, m, strandCount) +
+    backRim(ctx, bm) +
+    rimLight(ctx, d, yEnd - g.yTop);
+  const shortCut = ['short', 'buns', 'messy', 'drills', 'bob', 'sidetail', 'braid'].includes(p.hairBack);
+  const fade = endFade(ctx, yEnd, Math.min(g.u * 0.28, (yEnd - m.yc) * 0.4), shortCut ? '#b0b0b0' : '#808080');
+  out += fade.defs + looseStrands(ctx, bm, fills.fill);
+  out += group(cel(ctx, d, fills.fill, { ...opts, inside }), fade.attrs);
   return out;
 }
 
@@ -593,9 +814,7 @@ export function hairFrontSvg(ctx: Ctx): string {
     const endY = hairEnd(ctx);
     const sway = 0.38;
     const tieColor = p.headAcc !== 'none' ? p.headAccColor : '#ff8fb1';
-    out += cel(ctx, tailPath(ctx, -1, t, endY, sway), fills.fill, {
-      line: ctx.hairLine, shadeColor: fills.shade, dx: g.lw * 2.2, dy: -g.lw * 1.2, inside: tailFinish(ctx, fills, -1, t, endY, sway),
-    });
+    out += tailSvg(ctx, fills, -1, t, endY, sway, { line: ctx.hairLine, shadeColor: fills.shade, dx: g.lw * 2.2, dy: -g.lw * 1.2 });
     out += ellipse(t.x - hw * 0.02, t.y + u * 0.01, hw * 0.2, u * 0.045, { fill: tieColor, stroke: mix(tieColor, '#5a2040', 0.45), 'stroke-width': g.lw * 0.8, transform: `rotate(25 ${t.x - hw * 0.02} ${t.y + u * 0.01})` });
   } else if (p.hairBack === 'braid') {
     out += braidSvg(ctx, fills, 1);
@@ -705,11 +924,11 @@ function fineStrands(ctx: Ctx, tips: Pt[], crownX: number, m: HairMetrics, lockX
  * Warm back light along an outer edge of the hair: a wide blurred stroke, strongest on the upper left
  * (where the light comes from). Clipped to the hair shape by the caller.
  */
-function rimLight(ctx: Ctx, d: string): string {
+function rimLight(ctx: Ctx, d: string, reach = ctx.g.u): string {
   const { g } = ctx;
   const id = ctx.uid('rim');
   return (
-    `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${(-g.hw * 1.3).toFixed(1)}" y1="${g.yTop.toFixed(1)}" x2="${(g.hw * 1.3).toFixed(1)}" y2="${(g.yTop + g.u).toFixed(1)}">` +
+    `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${(-g.hw * 1.3).toFixed(1)}" y1="${g.yTop.toFixed(1)}" x2="${(g.hw * 1.3).toFixed(1)}" y2="${(g.yTop + Math.max(g.u, reach * 0.6)).toFixed(1)}">` +
     `<stop offset="0" stop-color="${ctx.hairRim}" stop-opacity="0.9"/><stop offset="1" stop-color="${ctx.hairRim}" stop-opacity="0.25"/></linearGradient>` +
     path(d, { fill: 'none', stroke: `url(#${id})`, 'stroke-width': (g.u * 0.06).toFixed(2), filter: `url(#${ctx.soft})` })
   );

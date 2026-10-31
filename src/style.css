@@ -355,11 +355,16 @@ button {
 .tabs {
   display: flex;
   gap: 6px;
-  margin: 0 -4px 10px;
-  padding: 2px 4px 6px;
+  margin: 0 -4px;
+  padding: 2px 4px 16px;
   overflow-x: auto;
   scrollbar-width: none;
   scroll-snap-type: x proximity;
+  /* stays visible below the sticky preview (--stage-h is set from the stage height in app.ts) */
+  position: sticky;
+  top: var(--stage-h, 0px);
+  z-index: 4;
+  background: var(--card);
 }
 
 .tabs::-webkit-scrollbar {
@@ -933,6 +938,9 @@ button {
   .tabs {
     flex-wrap: wrap;
     overflow: visible;
+    top: 0; /* the preview sits in its own column here */
+    padding-top: 12px;
+    margin-top: -12px;
   }
   .tab {
     min-width: 84px;

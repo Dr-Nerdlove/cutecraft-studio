@@ -59,6 +59,8 @@ export function computeGeo(p: AnimeParams): Geo {
   // about 7 heads tall: a grown-up, semi-realistic figure
   const u = H * lerp(0.5, 1 / 7.1, k);
   const headW = u * FACE_RATIO[p.faceShape] * lerp(1.1, 0.93, k);
+  // Body measurements use the oval head width, so the face shape never changes the body.
+  const baseHeadW = u * FACE_RATIO.oval * lerp(1.1, 0.93, k);
   const hw = headW / 2;
   // fine, light line art
   const lw = clamp(u * 0.0085, 0.8, 2.2);
@@ -82,7 +84,7 @@ export function computeGeo(p: AnimeParams): Geo {
   const waistT = slimT(p.waist, 40, -0.4);
   const hipsT = slimT(p.hips, 50, -0.3);
   const flat = (1 - k) * 0.7; // chibi bodies are simple beans
-  const shW = headW * lerp(0.6, 1.42, k) * lerp(0.84, 1.16, sh) * lerp(0.95, 1.07, build);
+  const shW = baseHeadW * lerp(0.6, 1.42, k) * lerp(0.84, 1.16, sh) * lerp(0.95, 1.07, build);
   const waistW = lerp(shW * lerp(0.58, 0.92, waistT) * lerp(0.92, 1.1, build), shW * 0.95, flat);
   const hipW = lerp(shW * lerp(0.66, 1.22, hipsT) * lerp(0.93, 1.1, build), shW * 0.98, flat);
 
@@ -97,7 +99,7 @@ export function computeGeo(p: AnimeParams): Geo {
 
   const geo: Geo = {
     k, H, u, headW, hw, lw, yTop, yChin, yShoulder, yCrotch, yAnkle, shoeH, torsoLen, legLen,
-    neckHW: headW * lerp(0.115, 0.098, k),
+    neckHW: baseHeadW * lerp(0.115, 0.098, k),
     shHW: shW / 2, waistHW: waistW / 2, hipHW,
     chestBulge: lerp(0.0, 0.07, build) * (shW / 2),
     armR, armLen, armAngle: lerp(0.1, 0.085, k),
@@ -154,7 +156,8 @@ type Profile = ReadonlyArray<readonly [number, number]>;
 const PROFILES: Record<AnimeParams['faceShape'], Profile> = {
   round: [[0, 0], [0.06, 0.42], [0.14, 0.7], [0.28, 0.93], [0.44, 1], [0.6, 0.97], [0.74, 0.87], [0.86, 0.67], [0.95, 0.37], [1, 0]],
   oval: [[0, 0], [0.06, 0.38], [0.14, 0.64], [0.28, 0.87], [0.44, 0.98], [0.6, 0.94], [0.74, 0.82], [0.86, 0.62], [0.95, 0.33], [1, 0]],
-  heart: [[0, 0], [0.06, 0.42], [0.14, 0.72], [0.28, 0.96], [0.42, 1], [0.58, 0.9], [0.72, 0.7], [0.85, 0.44], [0.94, 0.2], [1, 0]],
+  // wide cheekbones, a jaw that narrows gently and a small, softly rounded chin (no V point)
+  heart: [[0, 0], [0.06, 0.46], [0.14, 0.77], [0.28, 0.98], [0.38, 1], [0.52, 0.93], [0.66, 0.75], [0.78, 0.56], [0.88, 0.4], [0.95, 0.28], [0.985, 0.15], [1, 0]],
   square: [[0, 0], [0.06, 0.44], [0.14, 0.72], [0.28, 0.94], [0.46, 1], [0.66, 0.97], [0.82, 0.89], [0.93, 0.64], [0.985, 0.33], [1, 0]],
 };
 

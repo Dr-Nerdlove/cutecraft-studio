@@ -7,18 +7,49 @@ import type { AnimeParams } from './schema';
 // ---- shared helpers ---------------------------------------------------------------------------
 
 /**
- * Bangs: every lock ends in a sharp point (steep edges at the tip, narrow gaps between locks), so the
- * fringe reads as anime hair instead of a row of round drops. Same shape contract as `locks`.
+ * Fewer, wider bang locks: neighbouring interior tips are merged in pairs (the two outer tips join the
+ * side locks and stay where they are). Blunt bangs keep their single smooth line.
  */
-function bangLocks(tips: Pt[], depth: number): string {
+function mergeBangTips(ctx: Ctx, tips: Pt[]): Pt[] {
+  const style = ctx.p.hairFront;
+  if (style === 'blunt' || style === 'spiky') return tips;
+  if (style !== 'straight' || tips.length < 6) {
+    // other styles keep their shape, but neighbouring tips even out a little (no angular steps)
+    return tips.map((t, i) => (i === 0 || i === tips.length - 1 ? t : { x: t.x, y: t.y * 0.55 + (tips[i - 1].y + tips[i + 1].y) * 0.225 }));
+  }
+  const inner = tips.slice(1, -1);
+  const merged: Pt[] = [];
+  for (let i = 0; i < inner.length; i += 2) {
+    const a = inner[i], b = inner[i + 1];
+    merged.push({ x: b ? (a.x + b.x) / 2 : a.x, y: Math.max(a.y, b.y ?? a.y) + ctx.g.u * [0.02, -0.01, 0.03][(i / 2) % 3] });
+  }
+  return [tips[0], ...merged, tips[tips.length - 1]];
+}
+
+/**
+ * Bangs: a few soft, flowing locks. Every interior tip is a gently tapered lock with convex edges and a
+ * small round end; the gaps between locks are shallow, rounded U shapes (never V cuts). `smooth` draws
+ * one clean, even line instead (blunt bangs). `r` is the tip radius, `depth` the gap depth.
+ */
+function bangLocks(tips: Pt[], depth: number, r: number, smooth = false): string {
+  if (smooth) return smoothOpen(tips, 1 / 6, false);
+  const n = tips.length;
   let d = '';
-  for (let i = 0; i < tips.length - 1; i++) {
-    const A = tips[i], B = tips[i + 1];
-    const V: Pt = { x: (A.x + B.x) / 2, y: Math.min(A.y, B.y) - depth };
-    const dx1 = V.x - A.x, dx2 = B.x - V.x;
-    const dy1 = V.y - A.y, dy2 = B.y - V.y;
-    d += C(A.x + dx1 * 0.05, A.y + dy1 * 0.45, V.x - dx1 * 0.32, V.y - dy1 * 0.1, V.x, V.y);
-    d += C(V.x + dx2 * 0.32, V.y + dy2 * 0.1, B.x - dx2 * 0.05, B.y - dy2 * 0.45, B.x, B.y);
+  // points between two locks (the first and last "gap" are the outer tips themselves)
+  const gap = (i: number): Pt => (i === 0 ? tips[0] : i === n - 2 ? tips[n - 1] : {
+    x: (tips[i].x + tips[i + 1].x) / 2,
+    y: Math.min(tips[i].y, tips[i + 1].y) - depth,
+  });
+  for (let i = 1; i < n - 1; i++) {
+    const T = tips[i];
+    const L = gap(i - 1), R = gap(i);
+    const tl: Pt = { x: T.x - r, y: T.y - r * 1.3 };
+    const tr: Pt = { x: T.x + r, y: T.y - r * 1.3 };
+    const dl = tl.x - L.x, dr = R.x - tr.x;
+    // convex outer edge: drops first, then bends in towards the tip
+    d += C(L.x + dl * 0.22, L.y + (tl.y - L.y) * 0.4, tl.x - dl * 0.4, tl.y - (tl.y - L.y) * 0.25, tl.x, tl.y);
+    d += Q(T.x, T.y + r * 0.5, tr.x, tr.y);
+    d += C(tr.x + dr * 0.4, tr.y - (tr.y - R.y) * 0.25, R.x - dr * 0.22, R.y + (tr.y - R.y) * 0.4, R.x, R.y);
   }
   return d;
 }
@@ -87,7 +118,7 @@ function blobPath(cx: number, cy: number, rx: number, ry: number, rot: number): 
 
 /** Depth of the notches between bang locks, in head heights. */
 const BANG_DEPTH: Record<AnimeParams['hairFront'], number> = {
-  straight: 0.09, side: 0.09, parted: 0.09, curtain: 0.07, blunt: 0.014, swept: 0.1, spiky: 0.12, forehead: 0.03,
+  straight: 0.05, side: 0.05, parted: 0.045, curtain: 0.04, blunt: 0.014, swept: 0.05, spiky: 0.07, forehead: 0.03,
 };
 
 function skullArc(g: Geo, rx: number, yc: number, vTop: number, from: number, to: number, n = 10): Pt[] {
@@ -138,8 +169,12 @@ function hairEnd(ctx: Ctx): number {
 function massEnd(ctx: Ctx): number {
   const { g, p } = ctx;
   switch (p.hairBack) {
+    // tied styles: the hair is pulled back snugly, only the tail / braid / buns hang down
     case 'sidetail':
-    case 'braid': return g.yChin + g.u * 0.13;
+    case 'braid':
+    case 'ponytail':
+    case 'twintails':
+    case 'buns': return g.yTop + g.u * 0.76;
     case 'drills': return g.yTop + g.u * 0.9;
     default: return hairEnd(ctx);
   }
@@ -384,7 +419,7 @@ function backMass(ctx: Ctx): BackMass {
   let wave = 0;
   let inward = 0;
   const spec: TipSpec = { n: 7, varLen: 0.1, lean: 0.25, depth: 0.075, salt: 1 };
-  if (style === 'bob' || style === 'sidetail' || style === 'braid') { wTop = hw * 1.2; wEnd = hw * 1.12; inward = hw * 0.08; spec.n = 8; spec.varLen = 0.09; }
+  if (style === 'bob') { wTop = hw * 1.2; wEnd = hw * 1.12; inward = hw * 0.08; spec.n = 8; spec.varLen = 0.09; }
   if (style === 'messy') { wTop = hw * 1.2; wEnd = hw * 1.1; inward = hw * 0.04; spec.n = 8; spec.varLen = 0.16; spec.depth = 0.12; spec.lean = 0.35; }
   if (isLong(p)) {
     wTop = hw * 1.16;
@@ -395,7 +430,8 @@ function backMass(ctx: Ctx): BackMass {
     if (style === 'wavy') wave = hw * 0.1;
     if (style === 'hime') { spec.n = 7; spec.varLen = 0.05; spec.depth = 0.035; spec.lean = 0.1; }
   }
-  if (style === 'short' || style === 'buns' || style === 'ponytail' || style === 'twintails' || style === 'drills') { wTop = hw * 1.12; wEnd = hw * 1.0; spec.n = 6; spec.varLen = 0.08; }
+  if (style === 'short' || style === 'buns' || style === 'ponytail' || style === 'twintails' || style === 'drills' || style === 'sidetail' || style === 'braid') { wTop = hw * 1.12; wEnd = hw * 1.0; spec.n = 6; spec.varLen = 0.08; }
+  if (style === 'sidetail' || style === 'braid' || style === 'ponytail' || style === 'twintails' || style === 'buns') { wTop = hw * 1.08; wEnd = hw * 0.97; }
 
   const y0 = m.yc;
   const left: Pt[] = [];
@@ -695,7 +731,7 @@ function bangTips(ctx: Ctx): { tips: Pt[]; crown: number } {
     case 'parted':
       return { tips: [P(-0.7, 0.36), P(-0.5, 0.38), P(-0.3, 0.33), P(-0.08, 0.2), P(0.08, 0.2), P(0.3, 0.33), P(0.5, 0.38), P(0.7, 0.36)], crown: 0 };
     case 'blunt':
-      return { tips: [P(-0.7, 0.35), P(-0.26, 0.4), P(0.26, 0.4), P(0.7, 0.35)], crown: 0 };
+      return { tips: [P(-0.7, 0.375), P(-0.46, 0.395), P(-0.2, 0.405), P(0.2, 0.405), P(0.46, 0.395), P(0.7, 0.375)], crown: 0 };
     case 'swept':
       return { tips: [P(-0.7, 0.42), P(-0.5, 0.46), P(-0.28, 0.38), P(-0.02, 0.27), P(0.22, 0.2), P(0.46, 0.27), P(0.7, 0.34)], crown: 0.4 };
     case 'spiky':
@@ -734,7 +770,7 @@ export function hairFrontSvg(ctx: Ctx): string {
   const hw = g.hw, u = g.u;
   const m = metrics(ctx);
   const { tips: rawTips, crown } = bangTips(ctx);
-  const tips = styleBangTips(ctx, rawTips);
+  const tips = mergeBangTips(ctx, styleBangTips(ctx, rawTips));
   const lock = sideLock(ctx);
 
   const jl = tips[0];
@@ -778,7 +814,7 @@ export function hairFrontSvg(ctx: Ctx): string {
 
   const d =
     M(A.x, A.y) + left.down + left.up +
-    bangLocks(tips, u * BANG_DEPTH[p.hairFront]) +
+    bangLocks(tips, u * BANG_DEPTH[p.hairFront], hw * (p.hairFront === 'spiky' ? 0.02 : 0.035), p.hairFront === 'blunt') +
     rInner + rOuter +
     smoothOpen(arcR, 1 / 6, false) + 'Z';
 

@@ -38,6 +38,7 @@ export function mountApp(root: HTMLElement): void {
   let view: ViewKind = storageGet(VIEW_KEY) === 'portrait' ? 'portrait' : 'full';
   let viewBtn: HTMLButtonElement | null = null;
   let themeBtn: HTMLButtonElement | null = null;
+  let stageObserver: ResizeObserver | null = null;
 
   const currentMode = (): Mode => getMode(store.character.mode) ?? defaultMode;
 
@@ -203,6 +204,14 @@ export function mountApp(root: HTMLElement): void {
       bar.appendChild(b);
     }
     stage.append(card, bar);
+    // the category tabs stick right below the sticky preview: tell the CSS how tall it is
+    stageObserver?.disconnect();
+    if (typeof ResizeObserver !== 'undefined') {
+      stageObserver = new ResizeObserver(() => {
+        document.documentElement.style.setProperty('--stage-h', `${stage.offsetHeight}px`);
+      });
+      stageObserver.observe(stage);
+    }
 
     // panel
     const panel = h('section', 'panel');

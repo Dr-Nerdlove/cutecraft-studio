@@ -119,7 +119,7 @@ export const animeCategories: readonly Category[] = [
         { value: 'parted', labelKey: 'a.hairFront.parted' }, { value: 'curtain', labelKey: 'a.hairFront.curtain' },
         { value: 'blunt', labelKey: 'a.hairFront.blunt' }, { value: 'swept', labelKey: 'a.hairFront.swept' },
         { value: 'spiky', labelKey: 'a.hairFront.spiky' }, { value: 'forehead', labelKey: 'a.hairFront.forehead' },
-      ], 'straight', { showIf: (p) => p.hairBack !== 'afro' }),
+      ], 'straight', { showIf: (p) => p.hairBack !== 'afro' && p.hairBack !== 'dreads' }),
       color('hairColor', 'a.hairColor', HAIR_COLORS, '#a1604a'),
       color('hairTip', 'a.hairTip', HAIR_COLORS, '#f6a6c9'),
       slider('tipStrength', 'a.tipStrength', 0, 100, 1, 0),

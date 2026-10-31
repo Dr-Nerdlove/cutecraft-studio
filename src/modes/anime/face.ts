@@ -72,6 +72,34 @@ export function noseSvg(ctx: Ctx): string {
   if (p.nose === 'dot') {
     return ellipse(0, lo.noseY, a * 0.55, a * 0.4, { fill: col, opacity: 0.75 });
   }
+  const y = lo.noseY;
+  const sw = Math.max(0.8, g.lw * 0.75);
+  const tint = mix(ctx.skinShade, '#a85a52', 0.25);
+  if (p.nose === 'button') {
+    // small soft rounded tip with tiny nostril hints
+    return (
+      stroke(ctx, `${M(-a * 0.75, y + a * 0.25)}${Q(0, y + a * 0.95, a * 0.75, y + a * 0.25)}`, col, sw, { opacity: 0.8 }) +
+      ellipse(0, y - a * 0.1, a * 0.55, a * 0.42, { fill: tint, opacity: 0.6 }) +
+      ellipse(-a * 0.55, y + a * 0.45, a * 0.16, a * 0.11, { fill: col, opacity: 0.8 }) +
+      ellipse(a * 0.55, y + a * 0.45, a * 0.16, a * 0.11, { fill: col, opacity: 0.8 })
+    );
+  }
+  if (p.nose === 'defined') {
+    // thin bridge line from between the eyes into a small tip shadow
+    const top = lo.eyeY + lo.eyeH * 0.1;
+    const bx = -a * 0.35;
+    return (
+      stroke(ctx, `${M(a * 0.05, top)}${C(bx * 0.4, lerp(top, y, 0.45), bx * 1.3, lerp(top, y, 0.75), bx, y - a * 0.1)}${Q(-a * 0.15, y + a * 0.45, a * 0.5, y + a * 0.45)}`, col, Math.max(0.7, g.lw * 0.6), { opacity: 0.6 }) +
+      ellipse(a * 0.1, y + a * 0.35, a * 0.55, a * 0.22, { fill: tint, opacity: 0.35 })
+    );
+  }
+  if (p.nose === 'soft') {
+    // subtle shadow wedge under the tip
+    return (
+      path(`${M(-a * 0.7, y + a * 0.45)}${Q(0, y - a * 0.35, a * 0.7, y + a * 0.45)}${Q(0, y + a * 0.95, -a * 0.7, y + a * 0.45)}Z`, { fill: tint, opacity: 0.5 }) +
+      ellipse(-a * 0.08, y - a * 0.05, a * 0.22, a * 0.16, { fill: '#ffffff', opacity: 0.4 })
+    );
+  }
   return stroke(ctx, `${M(-a * 0.2, lo.noseY - a * 0.5)}${Q(a * 0.7, lo.noseY + a * 0.1, -a * 0.2, lo.noseY + a * 0.55)}`, col, Math.max(0.8, g.lw * 0.75), { opacity: 0.85 });
 }
 
@@ -120,6 +148,49 @@ export function mouthSvg(ctx: Ctx): string {
       return (
         stroke(ctx, `${M(-w * 0.3, y + w * 0.04)}${Q(-w * 0.15, y - w * 0.1, 0, y)}${Q(w * 0.15, y - w * 0.1, w * 0.3, y + w * 0.04)}`, lip, sw) +
         stroke(ctx, `${M(-w * 0.15, y + w * 0.16)}${Q(0, y + w * 0.24, w * 0.15, y + w * 0.16)}`, lip, sw * 0.8, { opacity: 0.8 })
+      );
+    }
+    case 'lips': {
+      // soft rounded lips: tinted fill derived from the skin, light upper line, gentle highlight
+      const fill = mix(ctx.skin, '#e8566f', 0.6);
+      const upperFill = darken(fill, 0.04);
+      const hw = w * 0.58;
+      const upper = `${M(-hw, y)}${C(-hw * 0.55, y - w * 0.04, -w * 0.14, y - w * 0.17, 0, y - w * 0.09)}${C(w * 0.14, y - w * 0.17, hw * 0.55, y - w * 0.04, hw, y)}`;
+      const lower = `${C(hw * 0.65, y + w * 0.3, -hw * 0.65, y + w * 0.3, -hw, y)}Z`;
+      const mid = `${M(-hw, y)}${Q(0, y + w * 0.06, hw, y)}`;
+      return (
+        path(upper + lower, { fill }) +
+        path(`${M(-hw, y)}${C(-hw * 0.55, y - w * 0.04, -w * 0.14, y - w * 0.17, 0, y - w * 0.09)}${C(w * 0.14, y - w * 0.17, hw * 0.55, y - w * 0.04, hw, y)}${Q(0, y + w * 0.06, -hw, y)}Z`, { fill: upperFill, opacity: 0.55 }) +
+        stroke(ctx, upper, lip, sw * 0.6, { opacity: 0.7 }) +
+        stroke(ctx, mid, lip, sw) +
+        ellipse(0, y + w * 0.15, w * 0.17, w * 0.045, { fill: '#ffffff', opacity: 0.6 })
+      );
+    }
+    case 'smirk': {
+      // one-sided smile: the right corner lifts more
+      const d = `${M(-w * 0.45, y + w * 0.04)}${Q(-w * 0.05, y + w * 0.2, w * 0.2, y + w * 0.06)}${Q(w * 0.4, y - w * 0.02, w * 0.52, y - w * 0.14)}`;
+      return (
+        stroke(ctx, d, lip, sw) +
+        stroke(ctx, `${M(w * 0.52, y - w * 0.14)}${L(w * 0.58, y - w * 0.2)}`, lip, sw * 0.8) +
+        stroke(ctx, `${M(w * 0.5, y - w * 0.04)}${Q(w * 0.56, y - w * 0.08, w * 0.58, y - w * 0.04)}`, lip, sw * 0.5, { opacity: 0.5 })
+      );
+    }
+    case 'grin': {
+      // wide smile showing a row of teeth
+      const id = ctx.uid('mouth');
+      const hw = w * 0.62;
+      const d = `${M(-hw, y - w * 0.02)}${Q(0, y + w * 0.04, hw, y - w * 0.02)}${C(hw * 0.8, y + w * 0.52, -hw * 0.8, y + w * 0.52, -hw, y - w * 0.02)}Z`;
+      return (
+        `<clipPath id="${id}">${path(d)}</clipPath>` +
+        path(d, { fill: inner }) +
+        group(
+          path(`${M(-hw, y - w * 0.04)}${L(hw, y - w * 0.04)}${L(hw, y + w * 0.16)}${Q(0, y + w * 0.22, -hw, y + w * 0.16)}Z`, { fill: '#ffffff' }) +
+          ellipse(0, y + w * 0.5, w * 0.3, w * 0.16, { fill: '#ff8fa3' }),
+          { 'clip-path': `url(#${id})` },
+        ) +
+        path(d, { fill: 'none', stroke: lip, 'stroke-width': sw, 'stroke-linejoin': 'round' }) +
+        stroke(ctx, `${M(-hw, y - w * 0.02)}${L(-hw - w * 0.05, y - w * 0.09)}`, lip, sw * 0.8) +
+        stroke(ctx, `${M(hw, y - w * 0.02)}${L(hw + w * 0.05, y - w * 0.09)}`, lip, sw * 0.8)
       );
     }
     case 'fang': {

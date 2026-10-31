@@ -71,6 +71,32 @@ function shapeFor(kind: AnimeParams['eyeShape'], W: number, Hh: number): EyeShap
         irisY: -Hh * 0.04, irisRx: W * 0.37, irisRy: Hh * 0.55, outer: O,
       };
     }
+    case 'doe': {
+      // large and softly rounded, outer corner gently drooping
+      const I: Pt = { x: -W / 2, y: -Hh * 0.02 };
+      const O: Pt = { x: W / 2, y: Hh * 0.1 };
+      const upperD = `${M(I.x, I.y)}${C(-W * 0.46, -Hh * 0.34, -W * 0.24, -Hh * 0.52, W * 0.0, -Hh * 0.52)}${C(W * 0.26, -Hh * 0.52, W * 0.46, -Hh * 0.3, O.x, O.y)}`;
+      const lowerD = `${C(W * 0.44, Hh * 0.38, W * 0.22, Hh * 0.52, -W * 0.02, Hh * 0.52)}${C(-W * 0.26, Hh * 0.52, -W * 0.48, Hh * 0.3, I.x, I.y)}`;
+      return {
+        outline: `${upperD}${lowerD}Z`,
+        upper: upperD,
+        lower: `${M(O.x, O.y)}${lowerD}`,
+        irisY: Hh * 0.0, irisRx: W * 0.43, irisRy: Hh * 0.55, outer: O,
+      };
+    }
+    case 'narrow': {
+      // calm, elegant, lower and longer; slightly lifted outer corner, lid covers the top of the iris
+      const I: Pt = { x: -W / 2, y: Hh * 0.12 };
+      const O: Pt = { x: W / 2, y: -Hh * 0.08 };
+      const upperD = `${M(I.x, I.y)}${C(-W * 0.36, -Hh * 0.18, -W * 0.14, -Hh * 0.44, W * 0.1, -Hh * 0.44)}${C(W * 0.3, -Hh * 0.44, W * 0.44, -Hh * 0.26, O.x, O.y)}`;
+      const lowerD = `${C(W * 0.38, Hh * 0.1, W * 0.16, Hh * 0.34, -W * 0.06, Hh * 0.34)}${C(-W * 0.3, Hh * 0.34, -W * 0.44, Hh * 0.26, I.x, I.y)}`;
+      return {
+        outline: `${upperD}${lowerD}Z`,
+        upper: upperD,
+        lower: `${M(O.x, O.y)}${lowerD}`,
+        irisY: -Hh * 0.02, irisRx: W * 0.31, irisRy: Hh * 0.5, outer: O,
+      };
+    }
     default: {
       const flat = kind === 'sparkly' ? 0.5 : 0.5;
       const { up, low } = arcPts(W, Hh, flat, 0.47);

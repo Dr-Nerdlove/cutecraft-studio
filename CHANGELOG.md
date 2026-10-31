@@ -6,6 +6,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Changed
 
+- New characters start with almond-shaped eyes; saved characters keep their eye shape.
 - Bodies can now be made much slimmer: the lower half of the build, shoulders, waist and hips sliders gives a clearly slender figure with narrower torso, thinner arms and legs. Characters at or above the default settings look exactly as before.
 - The language now follows the system language automatically (German or English); the manual language switch in the header is gone.
 - The portrait view zooms in closer on the face.
@@ -13,6 +14,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Added
 
+- More face shapes: almond, doe and narrow eyes; button, defined and soft-shadow noses; full lips, smirk and wide grin mouths.
 - Feedback dialog: a tip that the keyboard's microphone key can be used to dictate instead of typing.
 - Feedback button in the header: write a message and share it through the phone's share menu, together with a picture of the character and a settings code that restores it. Without a share menu, the text is copied and the picture is downloaded instead.
 - Dark mode: follows the system setting, and a button at the top right switches between light and dark (the choice is remembered).

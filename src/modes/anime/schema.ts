@@ -8,12 +8,12 @@ export interface AnimeParams {
   proportion: number; height: number; build: number; shoulders: number; waist: number; hips: number; skin: string;
   faceShape: 'round' | 'oval' | 'heart' | 'square';
   blush: number; blushColor: string; freckles: boolean;
-  nose: 'dot' | 'line' | 'none';
-  mouth: 'smile' | 'open' | 'cat' | 'o' | 'pout' | 'fang';
+  nose: 'dot' | 'line' | 'none' | 'button' | 'defined' | 'soft';
+  mouth: 'smile' | 'open' | 'cat' | 'o' | 'pout' | 'fang' | 'lips' | 'smirk' | 'grin';
   mouthSize: number;
   brow: 'soft' | 'straight' | 'raised' | 'worried';
   browThickness: number; browColor: string;
-  eyeShape: 'round' | 'sparkly' | 'sleepy' | 'cat' | 'happy';
+  eyeShape: 'almond' | 'doe' | 'narrow' | 'round' | 'sparkly' | 'sleepy' | 'cat' | 'happy';
   eyeSize: number; eyeSpacing: number; eyeY: number; iris: string; hetero: boolean; iris2: string;
   shine: 'classic' | 'star' | 'heart';
   lashes: 'none' | 'light' | 'full';
@@ -61,11 +61,13 @@ export const animeCategories: readonly Category[] = [
       toggle('freckles', 'a.freckles', false),
       choice('nose', 'a.nose', [
         { value: 'dot', labelKey: 'a.nose.dot' }, { value: 'line', labelKey: 'a.nose.line' }, { value: 'none', labelKey: 'a.nose.none' },
+        { value: 'button', labelKey: 'a.nose.button' }, { value: 'defined', labelKey: 'a.nose.defined' }, { value: 'soft', labelKey: 'a.nose.soft' },
       ], 'dot'),
       choice('mouth', 'a.mouth', [
         { value: 'smile', labelKey: 'a.mouth.smile' }, { value: 'open', labelKey: 'a.mouth.open' },
         { value: 'cat', labelKey: 'a.mouth.cat' }, { value: 'o', labelKey: 'a.mouth.o' },
         { value: 'pout', labelKey: 'a.mouth.pout' }, { value: 'fang', labelKey: 'a.mouth.fang' },
+        { value: 'lips', labelKey: 'a.mouth.lips' }, { value: 'smirk', labelKey: 'a.mouth.smirk' }, { value: 'grin', labelKey: 'a.mouth.grin' },
       ], 'smile'),
       slider('mouthSize', 'a.mouthSize', 0, 100, 1, 50),
       choice('brow', 'a.brow', [
@@ -80,10 +82,10 @@ export const animeCategories: readonly Category[] = [
     id: 'eyes', icon: '👀', labelKey: 'a.cat.eyes',
     params: [
       choice('eyeShape', 'a.eyeShape', [
-        { value: 'round', labelKey: 'a.eye.round' }, { value: 'sparkly', labelKey: 'a.eye.sparkly' },
+        { value: 'almond', labelKey: 'a.eye.almond' }, { value: 'doe', labelKey: 'a.eye.doe' }, { value: 'narrow', labelKey: 'a.eye.narrow' }, { value: 'round', labelKey: 'a.eye.round' }, { value: 'sparkly', labelKey: 'a.eye.sparkly' },
         { value: 'sleepy', labelKey: 'a.eye.sleepy' }, { value: 'cat', labelKey: 'a.eye.cat' },
         { value: 'happy', labelKey: 'a.eye.happy' },
-      ], 'sparkly'),
+      ], 'almond'),
       slider('eyeSize', 'a.eyeSize', 0, 100, 1, 60),
       slider('eyeSpacing', 'a.eyeSpacing', 0, 100, 1, 50),
       slider('eyeY', 'a.eyeY', 0, 100, 1, 50),

@@ -6,6 +6,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Changed
 
+- Bodies can now be made much slimmer: the lower half of the build, shoulders, waist and hips sliders gives a clearly slender figure with narrower torso, thinner arms and legs. Characters at or above the default settings look exactly as before.
 - The language now follows the system language automatically (German or English); the manual language switch in the header is gone.
 - The portrait view zooms in closer on the face.
 - Bangs now end in sharp points with a slight sweep and uneven lengths, instead of looking like round drops.

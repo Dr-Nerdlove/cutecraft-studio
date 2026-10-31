@@ -15,9 +15,12 @@ All notable changes to CuteCraft Studio. Format: newest first.
 - The language now follows the system language automatically (German or English); the manual language switch in the header is gone.
 - The portrait view zooms in closer on the face.
 - Bangs now end in sharp points with a slight sweep and uneven lengths, instead of looking like round drops.
+- Clothes look painted instead of cartoonish: natural, gently sloping shoulders with sleeves that hug the arm (no more puffy sleeves), soft fabric folds, a light and a shadow side, a soft shadow of the chin and hair on the clothes, and very soft collarbones where the neckline is open.
+- Back hair ends in soft, pointed, uneven tips that fade out slightly, with a few loose strands, fine strands following the hair flow and a warm glow on its outer edges (instead of round scallops and flat panels).
 
 ### Added
 
+- Two new mood backgrounds: "Sunset" (warm evening sky, low sun and soft hazy hills) and "Window light" (a room with soft light falling through a window from the upper left).
 - New background "Lights": a mood background with warm light from the upper left and soft, out-of-focus lights around the head.
 - More hairstyles: side ponytail, side braid, princess cut, short and messy, and drill curls.
 - More bangs: blunt, swept to the left, spiky and open forehead.

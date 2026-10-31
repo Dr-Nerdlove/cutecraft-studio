@@ -23,3 +23,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 - German and English interface, switchable in the header; the choice is remembered.
 - Web app manifest and app icon, so the page can be added to a home screen.
 - The app is published on GitHub Pages and rebuilt automatically after every change to `main`.
+
+### Removed
+
+- The proportion slider (chibi to anime) is gone; every character now uses normal anime proportions. Saved characters that used a chibi setting look different now (taller, smaller head).

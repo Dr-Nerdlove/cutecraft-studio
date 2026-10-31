@@ -52,7 +52,8 @@ export const GROUND_Y = 552;
 const FACE_RATIO = { round: 0.94, oval: 0.85, heart: 0.89, square: 0.93 } as const;
 
 export function computeGeo(p: AnimeParams): Geo {
-  const k = clamp(p.proportion / 100, 0, 1);
+  // Normal anime proportions only; the saved `proportion` value is ignored.
+  const k = 1;
   const H = 500;
   const u = H * lerp(0.5, 1 / 6.5, k);
   const headW = u * FACE_RATIO[p.faceShape] * lerp(1.1, 0.93, k);

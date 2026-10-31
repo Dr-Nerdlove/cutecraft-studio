@@ -71,8 +71,6 @@ export const en: Dictionary = {
   'a.cat.bg': 'Background',
 
   'a.proportion': 'Proportions',
-  'a.proportion.min': 'Chibi',
-  'a.proportion.max': 'Anime',
   'a.height': 'Height',
   'a.build': 'Body build',
   'a.build.min': 'Slim',

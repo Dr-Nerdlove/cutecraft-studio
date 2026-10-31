@@ -787,10 +787,46 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
     lightSide(ctx) +
     set.svg(ctx, true) +
     rimLight(ctx, all, len, 0.5);
-  let out = fade.defs + group(cel(ctx, all, fills.fill, { ...opts, inside }), fade.attrs);
+  let out = braidRoot(ctx, fills, side, { x: x0, y: y0 - (len / n) * 0.6 }, hw * 0.22, opts);
+  out += fade.defs + group(cel(ctx, all, fills.fill, { ...opts, inside }), fade.attrs);
   const tieColor = p.headAcc !== 'none' ? p.headAccColor : '#ff8fb1';
   out += ellipse(tx, ty - u * 0.01, w * 1.35, u * 0.032, { fill: tieColor, stroke: mix(tieColor, '#5a2040', 0.45), 'stroke-width': g.lw * 0.8 });
   return out;
+}
+
+/**
+ * The hair gathered from the side of the head into the braid: a sheaf that narrows from under the side
+ * hair down into the first link, with strands converging into it (so the braid grows out of the hair).
+ */
+function braidRoot(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1, start: Pt, w: number, opts: { line: string; shadeColor: string; dx: number; dy: number }): string {
+  const { g } = ctx;
+  const u = g.u, s = side;
+  const m = metrics(ctx);
+  const A: Pt = { x: s * m.rx * 0.5, y: g.yTop + u * 0.12 };
+  const B: Pt = { x: s * m.rx * 1.05, y: m.yc - u * 0.02 };
+  const Bo: Pt = { x: start.x + s * w * 0.9, y: start.y + u * 0.08 };
+  const Bi: Pt = { x: start.x - s * w * 0.9, y: start.y + u * 0.08 };
+  const d =
+    M(A.x, A.y) + Q(s * m.rx * 1.0, g.yTop + u * 0.08, B.x, B.y) +
+    Q(s * m.rx * 1.08, lerp(B.y, Bo.y, 0.6), Bo.x, Bo.y) + L(Bi.x, Bi.y) +
+    Q(s * m.rx * 0.72, lerp(A.y, Bi.y, 0.6), A.x, A.y) + 'Z';
+  const set = new StrandSet();
+  const sw = Math.max(0.45, g.lw * 0.55);
+  for (let j = 0; j < 12; j++) {
+    const f = (j + 0.5) / 12;
+    const r = hash(j * 4.9 + 21);
+    // top end on the arc from A to B, lower end bunched together in the middle of the gathered hair
+    const T: Pt = { x: lerp(A.x, B.x, f), y: lerp(A.y, B.y, f) - Math.sin(Math.PI * f) * u * 0.1 };
+    const E: Pt = { x: lerp(Bi.x, Bo.x, 0.2 + 0.6 * f), y: start.y + u * 0.06 };
+    const Cc: Pt = { x: lerp(T.x, E.x, 0.25) + s * u * 0.03, y: lerp(T.y, E.y, 0.7) };
+    toneStrand(ctx, set, M(T.x, T.y) + Q(Cc.x, Cc.y, E.x, E.y), r, sw * (0.7 + 0.6 * hash(j)));
+  }
+  // darker where it disappears under the side hair and next to the face
+  const inside =
+    shadeOverlay(ctx, start.y, g.yTop, fills.shade, 0.55) +
+    set.svg(ctx, true) +
+    rimLight(ctx, d, u, 0.5);
+  return cel(ctx, d, fills.fill, { ...opts, inside });
 }
 
 /** Both buns in the soft style: hair wound around the centre, darker underneath, a sheen and rim light. */

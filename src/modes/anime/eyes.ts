@@ -108,7 +108,7 @@ function eyeSvg(ctx: Ctx, side: -1 | 1, irisColor: string, W: number, Hh: number
     `<linearGradient id="${lidG}" x1="0" y1="0" x2="0" y2="1">` +
     `<stop offset="0" stop-color="#1a1018" stop-opacity="0.75"/><stop offset="0.5" stop-color="#1a1018" stop-opacity="0"/></linearGradient>` +
     `<linearGradient id="${scleraG}" x1="0" y1="0" x2="0" y2="1">` +
-    `<stop offset="0" stop-color="${darken(ctx.skinShade, 0.1)}" stop-opacity="0.75"/><stop offset="0.45" stop-color="#f2e6e6" stop-opacity="0"/></linearGradient>` +
+    `<stop offset="0" stop-color="${darken(ctx.skinShade, 0.12)}" stop-opacity="0.85"/><stop offset="0.55" stop-color="#f2e6e6" stop-opacity="0"/></linearGradient>` +
     `<radialGradient id="${shadowG}"><stop offset="0" stop-color="${shadowColor}" stop-opacity="0.42"/><stop offset="1" stop-color="${shadowColor}" stop-opacity="0"/></radialGradient>`;
 
   let eye = '';
@@ -117,7 +117,7 @@ function eyeSvg(ctx: Ctx, side: -1 | 1, irisColor: string, W: number, Hh: number
   eye += ellipse(W * 0.06, Hh * 0.5, W * 0.5, Hh * 0.26, { fill: `url(#${shadowG})`, opacity: 0.7 });
 
   // sclera, iris, pupil, clipped to the eye opening
-  eye += path(outlineD, { fill: '#fbf5f3' });
+  eye += path(outlineD, { fill: '#f6eeec' });
   const r = sh.irisR;
   const cy = sh.irisY;
   let inside = '';
@@ -134,10 +134,14 @@ function eyeSvg(ctx: Ctx, side: -1 | 1, irisColor: string, W: number, Hh: number
   inside += path(fibres, { fill: 'none', stroke: lighten(irisColor, 0.2), 'stroke-width': Math.max(0.25, r * 0.05), opacity: 0.4 });
   inside += circle(0, cy, r, { fill: 'none', stroke: darken(irisColor, 0.4), 'stroke-width': Math.max(0.35, r * 0.09), opacity: 0.85 });
   inside += circle(0, cy, r * 0.4, { fill: darken(mix(irisColor, '#120a14', 0.75), 0.02) });
-  inside += ellipse(0, cy + r * 0.55, r * 0.6, r * 0.28, { fill: lighten(irisColor, 0.3), opacity: 0.35 });
+  // light falling into the lower iris, and a soft window-like reflection
+  inside += ellipse(0, cy + r * 0.6, r * 0.75, r * 0.35, { fill: lighten(irisColor, 0.35), opacity: 0.55, filter: `url(#${ctx.soft})` });
+  inside += ellipse(r * 0.3 * sx, cy - r * 0.05, r * 0.3, r * 0.22, { fill: '#ffffff', opacity: 0.22, filter: `url(#${ctx.soft})` });
   // shadow cast by the upper lid
   inside += `<rect x="${-W * 0.6}" y="${-Hh * 0.6}" width="${W * 1.2}" height="${Hh * 1.1}" fill="url(#${lidG})"/>`;
   inside += highlights(ctx, sh, sx);
+  // wet rim along the lower lid
+  inside += stroke(ctx, smoothOpen([O, ...sh.low, I].map((q) => ({ x: q.x, y: q.y - Hh * 0.07 }))), '#ffffff', Math.max(0.3, lidW * 0.35), { opacity: 0.55 });
   eye += group(inside, { 'clip-path': `url(#${clip})` });
 
   // lower lid: fine line on the outer half, very light on the inner half
@@ -160,19 +164,20 @@ function eyeSvg(ctx: Ctx, side: -1 | 1, irisColor: string, W: number, Hh: number
 
   // lashes
   if (p.lashes !== 'none') {
-    const lw = Math.max(0.35, lidW * 0.42);
-    const ups = p.lashes === 'full' ? [0.45, 0.6, 0.73, 0.85, 0.95] : [0.7, 0.86];
+    // fine, dense lashes (thin strokes, not single thick hooks)
+    const lw = Math.max(0.25, lidW * 0.22);
+    const ups = p.lashes === 'full' ? [0.4, 0.5, 0.58, 0.66, 0.73, 0.8, 0.86, 0.92, 0.97] : [0.62, 0.74, 0.84, 0.93];
     for (const f of ups) {
       const i = f * (n - 1);
       const i0 = Math.floor(i), i1 = Math.min(n - 1, i0 + 1), t = i - i0;
       const a: Pt = { x: lerp(top[i0].x, top[i1].x, t), y: lerp(top[i0].y, top[i1].y, t) + lidW * 0.3 };
-      eye += lash(ctx, a, W * (0.06 + 0.12 * f), -Hh * (0.22 + 0.06 * f), lid, lw);
+      eye += lash(ctx, a, W * (0.04 + 0.1 * f), -Hh * (0.14 + 0.08 * f), lid, lw);
     }
-    eye += lash(ctx, { x: wing.x - W * 0.03, y: wing.y + Hh * 0.05 }, W * 0.12, -Hh * 0.12, lid, lw);
+    eye += lash(ctx, { x: wing.x - W * 0.03, y: wing.y + Hh * 0.05 }, W * 0.1, -Hh * 0.1, lid, lw * 1.2);
     if (p.lashes === 'full') {
       for (const f of [0, 1]) {
         const q = sh.low[f];
-        eye += lash(ctx, { x: q.x, y: q.y + Hh * 0.02 }, W * (0.05 - f * 0.02), Hh * 0.2, lid, lw * 0.75);
+        eye += lash(ctx, { x: q.x, y: q.y + Hh * 0.02 }, W * (0.04 - f * 0.02), Hh * 0.14, lid, lw * 0.8);
       }
     }
   }

@@ -1,4 +1,4 @@
-import { lighten, mix, shade } from '../../core/color';
+import { darken, lighten, mix, shade } from '../../core/color';
 import { C, M, Q, clamp, ellipse, group, lerp, path, smoothClosed, smoothOpen, type Pt } from '../../core/svg';
 import { cel, stroke, type Ctx } from './context';
 import { faceHalfWidthAt, faceRel, type Geo } from './geometry';
@@ -451,7 +451,11 @@ export function hairBackSvg(ctx: Ctx): string {
     faceShadow +
     shadeOverlay(ctx, m.yc, yEnd, ctx.hairShade, 0.55) +
     strandLines(ctx, [-0.88, -0.64, -0.4, 0.4, 0.64, 0.88], hw * 1.1, m.yc + g.u * 0.1, yEnd - g.u * 0.04, 0.12, ctx.hairShade, Math.max(0.7, g.lw * 0.7), 0.4) +
-    strandLines(ctx, [-0.76, -0.52, 0.52, 0.76], hw * 1.1, m.yc + g.u * 0.15, yEnd - g.u * 0.2, 0.1, ctx.hairLight, Math.max(0.8, g.lw * 0.8), 0.35);
+    strandLines(ctx, [-0.76, -0.52, 0.52, 0.76], hw * 1.1, m.yc + g.u * 0.15, yEnd - g.u * 0.2, 0.1, ctx.hairLight, Math.max(0.8, g.lw * 0.8), 0.35) +
+    strandLines(ctx, [-0.96, -0.82, -0.7, -0.58, -0.46, 0.46, 0.58, 0.7, 0.82, 0.96], hw * 1.1, m.yc + g.u * 0.05, yEnd - g.u * 0.08, 0.14, ctx.hairShade, Math.max(0.3, g.lw * 0.4), 0.35) +
+    strandLines(ctx, [-0.9, -0.64, -0.5, 0.5, 0.64, 0.9], hw * 1.1, m.yc + g.u * 0.2, yEnd - g.u * 0.3, 0.12, ctx.hairRim, Math.max(0.3, g.lw * 0.4), 0.3) +
+    lightSide(ctx) +
+    rimLight(ctx, d);
   out += cel(ctx, d, fills.fill, { ...opts, inside });
   return out;
 }
@@ -609,16 +613,106 @@ export function hairFrontSvg(ctx: Ctx): string {
   }
   // soft shadow of the bangs on the forehead
   out += group(
-    path(d, { fill: mix(ctx.skinShade, '#b07a8a', 0.4), opacity: 0.5, transform: `translate(0 ${u * 0.05})` }),
+    path(d, { fill: mix(ctx.skinShade, '#a0606e', 0.45), opacity: 0.6, transform: `translate(${g.hw * 0.03} ${u * 0.06})`, filter: `url(#${ctx.soft})` }),
     { 'clip-path': `url(#${ctx.faceClip})` },
   );
-  out += cel(ctx, d, fills.fill, {
+  // see-through bang tips: the hair fades out towards the ends of the bangs (not the side locks)
+  const fade = ctx.uid('bfade');
+  const fadeG = ctx.uid('bfadeg');
+  const tipTop = Math.min(...tips.map((q) => q.y));
+  const tipBot = Math.max(...tips.map((q) => q.y)) + u * 0.05;
+  const fadeOn = p.hairFront !== 'blunt' && p.hairFront !== 'forehead';
+  if (fadeOn) {
+    out +=
+      `<linearGradient id="${fadeG}" gradientUnits="userSpaceOnUse" x1="0" y1="${(tipTop - u * 0.12).toFixed(1)}" x2="0" y2="${tipBot.toFixed(1)}">` +
+      `<stop offset="0" stop-color="#fff"/><stop offset="0.55" stop-color="#999"/><stop offset="1" stop-color="#1a1a1a"/></linearGradient>` +
+      `<mask id="${fade}" maskUnits="userSpaceOnUse" x="${(-g.hw * 4).toFixed(1)}" y="${(g.yTop - g.u * 2).toFixed(1)}" width="${(g.hw * 8).toFixed(1)}" height="${(g.u * 8).toFixed(1)}">` +
+      `<rect x="${(-g.hw * 4).toFixed(1)}" y="${(g.yTop - g.u * 2).toFixed(1)}" width="${(g.hw * 8).toFixed(1)}" height="${(g.u * 8).toFixed(1)}" fill="#fff"/>` +
+      `<rect x="${(jl.x + g.hw * 0.05).toFixed(1)}" y="${(tipTop - u * 0.12).toFixed(1)}" width="${(jr.x - jl.x - g.hw * 0.1).toFixed(1)}" height="${(tipBot - tipTop + u * 0.3).toFixed(1)}" fill="url(#${fadeG})" filter="url(#${ctx.soft})"/></mask>`;
+  }
+  const front = cel(ctx, d, fills.fill, {
     line: ctx.hairLine, shadeColor: fills.shade, dx: -g.lw * 2.4, dy: -g.lw * 1.3,
-    inside: underside + strands + ring + ring2,
+    inside: underside + lightSide(ctx) + strands + fineStrands(ctx, tips, crownX, m, sx, ty) + ring + ring2 + rimLight(ctx, smoothOpen(arcR)),
   });
-  out += bangWisps(ctx, mix(p.hairColor, ctx.hairShade, 0.55), tips);
+  const wisps = bangWisps(ctx, mix(p.hairColor, ctx.hairShade, 0.55), tips);
+  out += fadeOn ? group(front + wisps, { mask: `url(#${fade})` }) : front + wisps;
   out += flyaways(ctx, m, ty);
   return out;
+}
+
+/** Light from the upper left: lighter hair on that side, deeper shadow on the right. */
+function lightSide(ctx: Ctx): string {
+  const { g } = ctx;
+  const id = ctx.uid('hls');
+  return (
+    `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${(-g.hw * 1.2).toFixed(1)}" y1="${(g.yTop - g.u * 0.1).toFixed(1)}" x2="${(g.hw * 1.3).toFixed(1)}" y2="${(g.yTop + g.u * 0.9).toFixed(1)}">` +
+    `<stop offset="0" stop-color="${ctx.hairLight}" stop-opacity="0.55"/><stop offset="0.45" stop-color="${ctx.hairLight}" stop-opacity="0"/>` +
+    `<stop offset="0.6" stop-color="${ctx.hairShade}" stop-opacity="0"/><stop offset="1" stop-color="${darken(ctx.hairShade, 0.06)}" stop-opacity="0.6"/></linearGradient>` +
+    `<rect x="${(-g.hw * 3).toFixed(1)}" y="${(g.yTop - g.u).toFixed(1)}" width="${(g.hw * 6).toFixed(1)}" height="${(g.u * 6).toFixed(1)}" fill="url(#${id})"/>`
+  );
+}
+
+/** Deterministic pseudo-random number in 0..1 (the same character always looks the same). */
+const hash = (i: number): number => {
+  const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+/**
+ * Many fine single strands from the crown to the bang tips and down the side locks, in dark, light and
+ * warm back-lit tones: the painted look of real hair. Clipped to the hair shape by the caller.
+ */
+function fineStrands(ctx: Ctx, tips: Pt[], crownX: number, m: HairMetrics, lockX: number, lockY: number): string {
+  const { g } = ctx;
+  const u = g.u;
+  const N = 30;
+  const x0 = tips[0].x, x1 = tips[tips.length - 1].x;
+  const tipY = (x: number): number => {
+    for (let i = 0; i < tips.length - 1; i++) {
+      const A = tips[i], B = tips[i + 1];
+      if (x >= A.x && x <= B.x) return lerp(A.y, B.y, (x - A.x) / Math.max(1e-6, B.x - A.x));
+    }
+    return tips[0].y;
+  };
+  let out = '';
+  for (let j = 0; j < N; j++) {
+    const f = j / (N - 1);
+    const r = hash(j);
+    const tone = j % 3 === 0 ? ctx.hairLight : j % 3 === 1 ? darken(ctx.hairShade, 0.05) : ctx.hairRim;
+    const op = j % 3 === 0 ? 0.55 : j % 3 === 1 ? 0.5 : 0.35;
+    const w = Math.max(0.3, g.lw * (0.4 + 0.4 * r));
+    let d: string;
+    if (f > 0.12 && f < 0.88) {
+      // bangs: from the crown down to just above the tip line
+      const tx = lerp(x0, x1, (f - 0.12) / 0.76);
+      const ty = tipY(tx) - u * (0.03 + 0.06 * r);
+      const sx0 = crownX + (tx - crownX) * 0.1 + (r - 0.5) * g.hw * 0.08;
+      d = `${M(sx0, g.yTop - u * 0.02)}${Q(crownX + (tx - crownX) * 0.95, g.yTop + (ty - g.yTop) * 0.3, tx, ty)}`;
+    } else {
+      // side locks: over the temple and down
+      const s = f < 0.5 ? -1 : 1;
+      const k = f < 0.5 ? f / 0.12 : (1 - f) / 0.12; // 0 = outer edge .. 1 = inner
+      const ex = s * (lockX + g.hw * (0.1 - 0.2 * k));
+      const ey = lockY - u * (0.04 + 0.12 * r);
+      d = `${M(crownX + s * g.hw * (0.15 + 0.2 * r), g.yTop)}${C(s * m.rx * (1.0 - 0.15 * k), m.yc - u * 0.1, s * (lockX + g.hw * (0.2 - 0.25 * k)), lerp(m.yc, ey, 0.45), ex, ey)}`;
+    }
+    out += stroke(ctx, d, tone, w, { opacity: op });
+  }
+  return out;
+}
+
+/**
+ * Warm back light along an outer edge of the hair: a wide blurred stroke, strongest on the upper left
+ * (where the light comes from). Clipped to the hair shape by the caller.
+ */
+function rimLight(ctx: Ctx, d: string): string {
+  const { g } = ctx;
+  const id = ctx.uid('rim');
+  return (
+    `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${(-g.hw * 1.3).toFixed(1)}" y1="${g.yTop.toFixed(1)}" x2="${(g.hw * 1.3).toFixed(1)}" y2="${(g.yTop + g.u).toFixed(1)}">` +
+    `<stop offset="0" stop-color="${ctx.hairRim}" stop-opacity="0.9"/><stop offset="1" stop-color="${ctx.hairRim}" stop-opacity="0.25"/></linearGradient>` +
+    path(d, { fill: 'none', stroke: `url(#${id})`, 'stroke-width': (g.u * 0.06).toFixed(2), filter: `url(#${ctx.soft})` })
+  );
 }
 
 /** Fine bright strands running through the sheen on the crown. */
@@ -655,7 +749,7 @@ function bangWisps(ctx: Ctx, fill: string, tips: Pt[]): string {
       M(base.x, base.y) +
       C(base.x - w * 1.4, lerp(base.y, end.y, 0.3), end.x - s * w * 0.8, lerp(base.y, end.y, 0.7), end.x, end.y) +
       C(end.x - s * w * 0.1, lerp(base.y, end.y, 0.65), base.x + w * 1.4, lerp(base.y, end.y, 0.3), base.x, base.y) + 'Z';
-    out += path(d, { fill });
+    out += path(d, { fill, opacity: 0.65 });
     out += stroke(ctx, `${M(lerp(base.x, end.x, 0.4), lerp(base.y, end.y, 0.4))}${Q(end.x - s * w * 0.6, lerp(base.y, end.y, 0.8), end.x, end.y)}`, ctx.hairLine, g.lw * 0.45, { opacity: 0.45 });
   }
   return out;

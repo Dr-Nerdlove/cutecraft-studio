@@ -12,6 +12,7 @@ export function earsSvg(ctx: Ctx): string {
     const x = s * g.hw * 0.93;
     const y = lo.eyeY + g.u * 0.05;
     out += ellipse(x, y, g.hw * 0.1, g.u * 0.085, { fill: p.skin, stroke: ctx.skinLine, 'stroke-width': g.lw * 0.8, transform: `rotate(${s * 8} ${x} ${y})` });
+    out += ellipse(x + s * g.hw * 0.02, y, g.hw * 0.06, g.u * 0.06, { fill: ctx.skinRose, opacity: 0.6, filter: `url(#${ctx.soft})` });
     out += stroke(ctx, `${M(x + s * g.hw * 0.04, y - g.u * 0.05)}${Q(x + s * g.hw * 0.07, y, x + s * g.hw * 0.02, y + g.u * 0.045)}`, ctx.skinShade, g.lw * 1.4, { opacity: 0.8 });
   }
   return out;
@@ -27,11 +28,22 @@ export function faceBaseSvg(ctx: Ctx): string {
   // the cheeks and a gentle shade along the jaw
   const defs =
     `<linearGradient id="${side}" x1="0" y1="0" x2="1" y2="0">` +
-    `<stop offset="0" stop-color="${shadow}" stop-opacity="0.55"/><stop offset="0.22" stop-color="${shadow}" stop-opacity="0"/>` +
-    `<stop offset="0.7" stop-color="${shadow}" stop-opacity="0"/><stop offset="1" stop-color="${shadow}" stop-opacity="0.8"/></linearGradient>` +
+    `<stop offset="0" stop-color="${shadow}" stop-opacity="0.45"/><stop offset="0.2" stop-color="${shadow}" stop-opacity="0"/>` +
+    `<stop offset="0.6" stop-color="${shadow}" stop-opacity="0"/><stop offset="0.85" stop-color="${shadow}" stop-opacity="0.45"/><stop offset="1" stop-color="${darken(shadow, 0.04)}" stop-opacity="0.9"/></linearGradient>` +
     `<radialGradient id="${glow}"><stop offset="0" stop-color="${lighten(ctx.skin, 0.05)}" stop-opacity="0.9"/><stop offset="1" stop-color="${lighten(ctx.skin, 0.05)}" stop-opacity="0"/></radialGradient>`;
+  const soft = `url(#${ctx.soft})`;
   const inside =
     path(ctx.faceD, { fill: `url(#${side})` }) +
+    // eye sockets: a soft shade between brow and eye, deepest at the inner corner
+    ellipse(-(lo.eyeDX - lo.eyeW * 0.25), lo.eyeY - lo.eyeH * 0.55, lo.eyeW * 0.55, lo.eyeH * 0.6, { fill: shadow, opacity: 0.3, filter: soft }) +
+    ellipse(lo.eyeDX - lo.eyeW * 0.25, lo.eyeY - lo.eyeH * 0.55, lo.eyeW * 0.55, lo.eyeH * 0.6, { fill: shadow, opacity: 0.4, filter: soft }) +
+    // rosy nose tip and chin
+    ellipse(0, lo.noseY, g.headW * 0.07, g.u * 0.04, { fill: ctx.skinRose, opacity: 0.55, filter: soft }) +
+    ellipse(0, g.yChin - g.u * 0.06, g.headW * 0.1, g.u * 0.04, { fill: ctx.skinRose, opacity: 0.3, filter: soft }) +
+    // lit areas: forehead, bridge of the nose, cheekbone on the light side
+    ellipse(-g.hw * 0.15, g.yTop + g.u * 0.32, g.hw * 0.45, g.u * 0.1, { fill: '#ffffff', opacity: 0.18, filter: soft }) +
+    ellipse(-g.headW * 0.01, lerp(lo.eyeY, lo.noseY, 0.65), g.headW * 0.022, g.u * 0.045, { fill: '#ffffff', opacity: 0.2, filter: soft }) +
+    ellipse(-(lo.eyeDX + lo.eyeW * 0.1), lo.eyeY + g.u * 0.1, lo.eyeW * 0.35, g.u * 0.03, { fill: '#ffffff', opacity: 0.3, filter: soft }) +
     ellipse(g.hw * 0.25, g.yChin - g.u * 0.02, g.hw * 0.95, g.u * 0.16, { fill: shadow, opacity: 0.35, filter: `url(#${ctx.soft})` }) +
     ellipse(-g.hw * 0.12, lo.eyeY + g.u * 0.08, g.hw * 0.75, g.u * 0.3, { fill: `url(#${glow})` });
   return (
@@ -39,7 +51,7 @@ export function faceBaseSvg(ctx: Ctx): string {
     `<clipPath id="${ctx.faceClip}">${path(ctx.faceD)}</clipPath>` +
     path(ctx.faceD, { fill: ctx.skin }) +
     group(inside, { 'clip-path': `url(#${ctx.faceClip})` }) +
-    path(ctx.faceD, { fill: 'none', stroke: ctx.skinLine, 'stroke-width': g.lw, 'stroke-linejoin': 'round', opacity: 0.8 })
+    path(ctx.faceD, { fill: 'none', stroke: ctx.skinLine, 'stroke-width': g.lw * 0.8, 'stroke-linejoin': 'round', opacity: 0.4 })
   );
 }
 
@@ -90,8 +102,8 @@ export function noseSvg(ctx: Ctx): string {
   const tipShadow = path(`${M(-a * 1.05, y + a * 0.15)}${Q(0, y + a * 1.1, a * 1.15, y + a * 0.1)}${Q(a * 0.1, y + a * 0.5, -a * 1.05, y + a * 0.15)}Z`, { fill: tint, opacity: 0.55, filter: soft });
   const highlight = ellipse(-a * 0.2, y - a * 0.2, a * 0.32, a * 0.26, { fill: '#ffffff', opacity: 0.45, filter: soft });
   const nostrils = (o: number): string =>
-    stroke(ctx, `${M(-a * 0.95, y + a * 0.05)}${Q(-a * 0.95, y + a * 0.6, -a * 0.32, y + a * 0.52)}`, col, sw, { opacity: o * 0.8 }) +
-    stroke(ctx, `${M(a * 0.95, y + a * 0.05)}${Q(a * 0.95, y + a * 0.6, a * 0.32, y + a * 0.52)}`, col, sw, { opacity: o });
+    stroke(ctx, `${M(-a * 0.85, y + a * 0.3)}${Q(-a * 0.75, y + a * 0.6, -a * 0.35, y + a * 0.55)}`, col, sw, { opacity: o * 0.7 }) +
+    stroke(ctx, `${M(a * 0.85, y + a * 0.3)}${Q(a * 0.75, y + a * 0.6, a * 0.35, y + a * 0.55)}`, col, sw, { opacity: o * 0.9 });
   switch (p.nose) {
     case 'dot':
       return tipShadow + ellipse(0, y + a * 0.3, a * 0.35, a * 0.22, { fill: col, opacity: 0.6 });
@@ -119,7 +131,7 @@ function lips(ctx: Ctx, w: number, y: number, lift: number, scale: number, tint:
   const hw = w * 0.62 * scale;
   const base = mix(ctx.skin, '#d24a64', tint);
   const upperC = darken(base, 0.08);
-  const lineC = mix(darken(base, 0.3), '#4a1424', 0.45);
+  const lineC = mix(darken(base, 0.22), '#6a2434', 0.35);
   const cy = y - lift;
   const upper = `${M(-hw, cy)}${C(-hw * 0.6, y - w * 0.06, -w * 0.2, y - w * 0.22, -w * 0.1, y - w * 0.2)}${Q(0, y - w * 0.2, 0, y - w * 0.13)}${Q(0, y - w * 0.2, w * 0.1, y - w * 0.2)}${C(w * 0.2, y - w * 0.22, hw * 0.6, y - w * 0.06, hw, cy)}`;
   const mid = `${Q(0, y + w * 0.06 + lift * 0.4, -hw, cy)}`;
@@ -131,7 +143,7 @@ function lips(ctx: Ctx, w: number, y: number, lift: number, scale: number, tint:
     ellipse(0, y + w * 0.42, hw * 0.55, w * 0.1, { fill: ctx.skinShade, opacity: 0.45, filter: `url(#${ctx.soft})` }) +
     path(lower, { fill: `url(#${gid})` }) +
     path(upper + mid + 'Z', { fill: upperC }) +
-    stroke(ctx, `${M(-hw * 1.04, cy - lift * 0.1)}${Q(0, y + w * 0.06 + lift * 0.4, hw * 1.04, cy - lift * 0.1)}`, lineC, Math.max(0.5, g.lw * 0.9)) +
+    stroke(ctx, `${M(-hw * 0.97, cy - lift * 0.1)}${Q(0, y + w * 0.06 + lift * 0.4, hw * 0.97, cy - lift * 0.1)}`, lineC, Math.max(0.4, g.lw * 0.7), { opacity: 0.85 }) +
     ellipse(-w * 0.06, y + w * 0.16, w * 0.15, w * 0.04, { fill: '#ffffff', opacity: 0.55 }) +
     ellipse(-w * 0.12, y - w * 0.15, w * 0.05, w * 0.018, { fill: '#ffffff', opacity: 0.4 })
   );

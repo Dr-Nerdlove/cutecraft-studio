@@ -7,6 +7,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 ### Changed
 
 - The anime mode now has a semi-realistic anime look: a slimmer face with a soft chin, smaller almond-shaped eyes with a dark lash line, eyelid crease, detailed iris and soft eyeshadow, a real nose with soft shading, full lips with a gloss highlight, tapered eyebrows, softer shading and finer, lighter outlines everywhere, wispy bangs and loose single hairs, and grown-up body proportions (about seven heads tall). Saved characters keep all their settings and are drawn in the new look.
+- More painterly look, especially in the portrait view: warm, rosy shadows on the skin (eye sockets, nose tip, ears, chin) and soft highlights; hair with many fine strands, a light and a shadow side and a warm glow on its outer edges; bang tips that fade out softly; glossier eyes with a wet lower lid and finer, denser lashes; outlines are only half visible.
 - New characters start with a defined nose, full lips, an oval face, lighter blush and no ahoge; the dice picks real noses and lips more often.
 - Hair is drawn more nicely: more strand lines, a shine band on the crown, a soft darker underside and gentle shading towards the tips.
 - New characters start with almond-shaped eyes; saved characters keep their eye shape.
@@ -17,6 +18,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Added
 
+- New background "Lights": a mood background with warm light from the upper left and soft, out-of-focus lights around the head.
 - More hairstyles: side ponytail, side braid, princess cut, short and messy, and drill curls.
 - More bangs: blunt, swept to the left, spiky and open forehead.
 - More face shapes: almond, doe and narrow eyes; button, defined and soft-shadow noses; full lips, smirk and wide grin mouths.

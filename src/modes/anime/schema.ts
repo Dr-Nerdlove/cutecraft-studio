@@ -31,7 +31,7 @@ export interface AnimeParams {
   headAccColor: string;
   glasses: 'none' | 'round' | 'heart';
   bgColor: string;
-  bgPattern: 'plain' | 'dots' | 'hearts' | 'stars' | 'gradient';
+  bgPattern: 'plain' | 'dots' | 'hearts' | 'stars' | 'gradient' | 'bokeh';
 }
 
 const longHair = (p: Params): boolean => ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid', 'hime', 'drills'].includes(p.hairBack as string);
@@ -167,7 +167,7 @@ export const animeCategories: readonly Category[] = [
       choice('bgPattern', 'a.bgPattern', [
         { value: 'plain', labelKey: 'a.bgPattern.plain' }, { value: 'dots', labelKey: 'a.bgPattern.dots' },
         { value: 'hearts', labelKey: 'a.bgPattern.hearts' }, { value: 'stars', labelKey: 'a.bgPattern.stars' },
-        { value: 'gradient', labelKey: 'a.bgPattern.gradient' },
+        { value: 'gradient', labelKey: 'a.bgPattern.gradient' }, { value: 'bokeh', labelKey: 'a.bgPattern.bokeh' },
       ], 'hearts'),
     ],
   },

@@ -109,6 +109,7 @@ export const en: Dictionary = {
   'a.browColor': 'Eyebrow colour',
 
   'a.eyeShape': 'Eye shape',
+  'a.eye.almond': 'Almond',
   'a.eye.round': 'Big & round',
   'a.eye.sparkly': 'Sparkly',
   'a.eye.sleepy': 'Sleepy',

@@ -108,6 +108,7 @@ export const de = {
   'a.browColor': 'Brauenfarbe',
 
   'a.eyeShape': 'Augenform',
+  'a.eye.almond': 'Mandel',
   'a.eye.round': 'Groß & rund',
   'a.eye.sparkly': 'Funkelnd',
   'a.eye.sleepy': 'Verschlafen',

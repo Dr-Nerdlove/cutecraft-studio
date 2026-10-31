@@ -58,6 +58,19 @@ function shapeFor(kind: AnimeParams['eyeShape'], W: number, Hh: number): EyeShap
         irisY: -Hh * 0.02, irisRx: W * 0.36, irisRy: Hh * 0.52, outer: O,
       };
     }
+    case 'almond': {
+      // elongated, tapered inner corner, gently upswept outer corner; heavier upper lid than a round eye
+      const I: Pt = { x: -W / 2, y: Hh * 0.1 };
+      const O: Pt = { x: W / 2, y: -Hh * 0.12 };
+      const upperD = `${M(I.x, I.y)}${C(-W * 0.34, -Hh * 0.2, -W * 0.14, -Hh * 0.5, W * 0.08, -Hh * 0.5)}${C(W * 0.28, -Hh * 0.5, W * 0.43, -Hh * 0.3, O.x, O.y)}`;
+      const lowerD = `${C(W * 0.36, Hh * 0.1, W * 0.14, Hh * 0.44, -W * 0.08, Hh * 0.44)}${C(-W * 0.3, Hh * 0.44, -W * 0.44, Hh * 0.28, I.x, I.y)}`;
+      return {
+        outline: `${upperD}${lowerD}Z`,
+        upper: upperD,
+        lower: `${M(O.x, O.y)}${lowerD}`,
+        irisY: -Hh * 0.04, irisRx: W * 0.37, irisRy: Hh * 0.55, outer: O,
+      };
+    }
     default: {
       const flat = kind === 'sparkly' ? 0.5 : 0.5;
       const { up, low } = arcPts(W, Hh, flat, 0.47);

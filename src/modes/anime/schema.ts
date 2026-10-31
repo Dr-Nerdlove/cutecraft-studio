@@ -13,7 +13,7 @@ export interface AnimeParams {
   mouthSize: number;
   brow: 'soft' | 'straight' | 'raised' | 'worried';
   browThickness: number; browColor: string;
-  eyeShape: 'round' | 'sparkly' | 'sleepy' | 'cat' | 'happy';
+  eyeShape: 'almond' | 'round' | 'sparkly' | 'sleepy' | 'cat' | 'happy';
   eyeSize: number; eyeSpacing: number; eyeY: number; iris: string; hetero: boolean; iris2: string;
   shine: 'classic' | 'star' | 'heart';
   lashes: 'none' | 'light' | 'full';
@@ -80,10 +80,10 @@ export const animeCategories: readonly Category[] = [
     id: 'eyes', icon: '👀', labelKey: 'a.cat.eyes',
     params: [
       choice('eyeShape', 'a.eyeShape', [
-        { value: 'round', labelKey: 'a.eye.round' }, { value: 'sparkly', labelKey: 'a.eye.sparkly' },
+        { value: 'almond', labelKey: 'a.eye.almond' }, { value: 'round', labelKey: 'a.eye.round' }, { value: 'sparkly', labelKey: 'a.eye.sparkly' },
         { value: 'sleepy', labelKey: 'a.eye.sleepy' }, { value: 'cat', labelKey: 'a.eye.cat' },
         { value: 'happy', labelKey: 'a.eye.happy' },
-      ], 'sparkly'),
+      ], 'almond'),
       slider('eyeSize', 'a.eyeSize', 0, 100, 1, 60),
       slider('eyeSpacing', 'a.eyeSpacing', 0, 100, 1, 50),
       slider('eyeY', 'a.eyeY', 0, 100, 1, 50),

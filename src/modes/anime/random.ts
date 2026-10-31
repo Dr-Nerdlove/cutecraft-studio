@@ -72,7 +72,7 @@ export function randomAnime(): AnimeParams {
     brow: weighted([['soft', 3], ['straight', 1.5], ['raised', 1], ['worried', 0.8]] as const),
     browThickness: rnd(20, 60),
     browColor: BROW_COLORS.includes(browColor as never) ? browColor : '#5a3f3a',
-    eyeShape: weighted([['round', 2.2], ['sparkly', 3], ['sleepy', 0.8], ['cat', 1.2], ['happy', 0.7]] as const),
+    eyeShape: weighted([['almond', 2.4], ['round', 2.2], ['sparkly', 3], ['sleepy', 0.8], ['cat', 1.2], ['happy', 0.7]] as const),
     eyeSize: rnd(45, 85),
     eyeSpacing: rnd(30, 70),
     eyeY: rnd(35, 65),

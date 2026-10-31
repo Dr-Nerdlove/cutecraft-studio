@@ -13,7 +13,7 @@ export interface FaceLayout {
   mouthW: number;
 }
 
-const EYE_ASPECT = { round: 1.12, sparkly: 1.2, sleepy: 0.86, cat: 0.82, happy: 0.55 } as const;
+const EYE_ASPECT = { round: 1.12, sparkly: 1.2, sleepy: 0.86, cat: 0.82, almond: 0.92, happy: 0.55 } as const;
 
 export function faceLayout(ctx: Ctx): FaceLayout {
   const { g, p } = ctx;

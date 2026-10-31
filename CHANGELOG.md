@@ -6,6 +6,11 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Changed
 
+- The face shape no longer changes the body: shoulders and neck stay the same for round, oval, heart and square faces.
+- The heart face shape is nicer: wide cheekbones, a clearly narrower jaw than the oval face and a small, softly rounded chin instead of a pointed one.
+- Bangs are softer and less jagged: fewer, wider locks with rounded tips and shallow rounded gaps instead of sharp teeth, and blunt bangs are one clean, smooth line.
+- With braids, ponytails, twintails, side ponytails and buns, no hair hangs down at the back any more: the hair is pulled back snugly and only the tail, braid or buns hang down, whatever the hair length.
+- The category tabs (body, face, eyes, hair, ...) stay visible at the top while scrolling through the options.
 - The anime mode now has a semi-realistic anime look: a slimmer face with a soft chin, smaller almond-shaped eyes with a dark lash line, eyelid crease, detailed iris and soft eyeshadow, a real nose with soft shading, full lips with a gloss highlight, tapered eyebrows, softer shading and finer, lighter outlines everywhere, wispy bangs and loose single hairs, and grown-up body proportions (about seven heads tall). Saved characters keep all their settings and are drawn in the new look.
 - More painterly look, especially in the portrait view: warm, rosy shadows on the skin (eye sockets, nose tip, ears, chin) and soft highlights; hair with many fine strands, a light and a shadow side and a warm glow on its outer edges; bang tips that fade out softly; glossier eyes with a wet lower lid and finer, denser lashes; outlines are only half visible.
 - New characters start with a defined nose, full lips, an oval face, lighter blush and no ahoge; the dice picks real noses and lips more often.

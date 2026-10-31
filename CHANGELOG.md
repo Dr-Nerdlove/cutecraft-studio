@@ -6,6 +6,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Changed
 
+- Wavy hair now really looks wavy: soft S-waves in the outline and in the strands.
 - The face shape no longer changes the body: shoulders and neck stay the same for round, oval, heart and square faces.
 - The heart face shape is nicer: wide cheekbones, a clearly narrower jaw than the oval face and a small, softly rounded chin instead of a pointed one.
 - Bangs are softer and less jagged: fewer, wider locks with rounded tips and shallow rounded gaps instead of sharp teeth, and blunt bangs are one clean, smooth line.
@@ -25,6 +26,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Added
 
+- Four new hairstyles: curls (a full mane of spiral ringlets, from a short curly bob to mid-back with the length slider), afro (round and voluminous, the length slider sets its size), dreadlocks (locks from the hairline over the shoulders, with small gold cuffs) and a pixie cut (very short and textured). Afro and dreadlocks bring their own hairline, so the bangs choice is hidden for them. Bows, ears, hats and the ahoge sit on top of the afro, curls and dreadlocks.
 - Two new mood backgrounds: "Sunset" (warm evening sky, low sun and soft hazy hills) and "Window light" (a room with soft light falling through a window from the upper left).
 - New background "Lights": a mood background with warm light from the upper left and soft, out-of-focus lights around the head.
 - More hairstyles: side ponytail, side braid, princess cut, short and messy, and drill curls.

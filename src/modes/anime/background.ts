@@ -1,5 +1,5 @@
 import { darken, hueShift, lighten, mix } from '../../core/color';
-import { circle, ellipse, heartPath, path, starPath } from '../../core/svg';
+import { circle, ellipse, heartPath, path, smoothOpen, starPath } from '../../core/svg';
 import type { Ctx } from './context';
 import { GROUND_Y, VIEW_H, VIEW_W, portraitBox } from './geometry';
 
@@ -50,10 +50,17 @@ function cloud(x: number, y: number, w: number, fill: string, opacity: number): 
   );
 }
 
+/** A band of hills: a smooth irregular ridge at `y0` (varying by `amp`), filled down to the bottom. */
+function hills(y0: number, amp: number, seed: number, fill: string, opacity: number): string {
+  const pts = [];
+  for (let i = -1; i <= 7; i++) pts.push({ x: i * 60, y: y0 - amp * (hash(seed + i * 3.1) * 1.1 - 0.2) });
+  return path(`${smoothOpen(pts, 1 / 5)} L${VIEW_W + 60} ${VIEW_H} L-60 ${VIEW_H} Z`, { fill, opacity });
+}
+
 /**
- * Sunset: warm sky, low sun glow and blurred distant hills with a tree line. The horizon sits at
- * shoulder height of the portrait view, so the portrait shows sky, sun and hills; below it a dim
- * ground carries the figure in the full view.
+ * Sunset: warm sky, low sun glow and layered blurred hills with warm haze. The horizon sits at head
+ * height of the portrait view, so the portrait shows sky, sun and hills; below it a softly lit meadow
+ * carries the figure in the full view. Far hills are pale and hazy, nearer ones warmer and darker.
  */
 function sunsetSvg(ctx: Ctx): string {
   const { p } = ctx;
@@ -63,22 +70,28 @@ function sunsetSvg(ctx: Ctx): string {
   const sky = ctx.uid('ssk');
   const sun = ctx.uid('ssn');
   const grd = ctx.uid('sgr');
+  const haze = ctx.uid('shz');
   const blur = ctx.uid('sbf');
   const top = darken(mix(bg, '#9a78c0', 0.5), 0.02);
   const mid = mix(bg, '#f6a8b0', 0.5);
   const low = mix(bg, '#ffcf8c', 0.6);
-  const hillFar = mix(bg, '#8a5f9a', 0.7);
-  const hillNear = darken(mix(bg, '#4e3566', 0.78), 0.03);
+  const plum = mix(bg, '#9a6a98', 0.6);
+  const hillFar = mix(low, plum, 0.45); // pale, hazy
+  const hillMid = mix(low, plum, 0.62);
+  const hillNear = mix(low, darken(plum, 0.05), 0.8); // warmer and darker, never near-black
+  const meadowTop = mix(low, '#e09a8a', 0.55);
+  const meadowLow = mix(low, mix(bg, '#d8b070', 0.5), 0.7);
   const sunX = box.x + box.w * 0.13;
   const sunR = Math.max(box.w * 0.3, 55);
-  const hh = Math.max(box.h, 240); // vertical scale of hills so the full view stays lively
+  const hh = Math.max(box.h, 240); // vertical scale of the land so the full view stays lively
   let out =
     `<defs><linearGradient id="${sky}" x1="0" y1="0" x2="0" y2="1">` +
     `<stop offset="0" stop-color="${top}"/><stop offset="${((hy * 0.55) / VIEW_H).toFixed(3)}" stop-color="${mid}"/>` +
     `<stop offset="${(hy / VIEW_H).toFixed(3)}" stop-color="${low}"/><stop offset="1" stop-color="${low}"/></linearGradient>` +
     `<radialGradient id="${sun}"><stop offset="0" stop-color="#fff6d8" stop-opacity="0.95"/><stop offset="0.25" stop-color="#ffe0a0" stop-opacity="0.7"/>` +
     `<stop offset="1" stop-color="#ffb890" stop-opacity="0"/></radialGradient>` +
-    `<linearGradient id="${grd}" gradientUnits="userSpaceOnUse" x1="0" y1="${hy.toFixed(1)}" x2="0" y2="${GROUND_Y}"><stop offset="0" stop-color="${hillNear}"/><stop offset="1" stop-color="${mix(hillNear, low, 0.35)}"/></linearGradient>` +
+    `<linearGradient id="${grd}" gradientUnits="userSpaceOnUse" x1="0" y1="${(hy + hh * 0.12).toFixed(1)}" x2="0" y2="${GROUND_Y}"><stop offset="0" stop-color="${meadowTop}"/><stop offset="1" stop-color="${meadowLow}"/></linearGradient>` +
+    `<linearGradient id="${haze}" gradientUnits="userSpaceOnUse" x1="0" y1="${(hy - hh * 0.12).toFixed(1)}" x2="0" y2="${(hy + hh * 0.3).toFixed(1)}"><stop offset="0" stop-color="#ffdcb0" stop-opacity="0"/><stop offset="0.35" stop-color="#ffdcb0" stop-opacity="0.28"/><stop offset="1" stop-color="#ffdcb0" stop-opacity="0"/></linearGradient>` +
     `<filter id="${blur}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${Math.max(box.w * 0.012, 1.6).toFixed(2)}"/></filter></defs>` +
     `<rect width="${VIEW_W}" height="${VIEW_H}" fill="url(#${sky})"/>` +
     ellipse(sunX, hy - box.h * 0.04, sunR * 1.5, sunR * 1.1, { fill: `url(#${sun})` });
@@ -91,27 +104,24 @@ function sunsetSvg(ctx: Ctx): string {
     cloud(box.x + box.w * 0.2, box.y + box.h * 0.38, box.w * 0.5, clHi, 0.5) +
     cloud(box.x + box.w * 0.86, box.y + box.h * 0.5, box.w * 0.45, clHi, 0.45) +
     cloud(box.x + box.w * 0.45, box.y + box.h * 0.1, box.w * 0.4, cl, 0.4);
-  // Sun disc.
   soft += circle(sunX, hy - box.h * 0.035, Math.max(box.w * 0.07, 12), { fill: '#fff4d0', opacity: 0.95 });
-  // Far hills, near hills and a tree line (all blurred silhouettes).
-  const W = VIEW_W;
-  const far =
-    `M-20 ${hy + 6} C ${W * 0.15} ${hy - hh * 0.1}, ${W * 0.3} ${hy - hh * 0.02}, ${W * 0.5} ${hy - hh * 0.06} ` +
-    `S ${W * 0.85} ${hy - hh * 0.1}, ${W + 20} ${hy - hh * 0.02} L${W + 20} ${VIEW_H} L-20 ${VIEW_H} Z`;
-  soft += path(far, { fill: hillFar, opacity: 0.9 });
-  for (let i = 0; i < 16; i++) {
-    const tx = -10 + i * (W / 15) + (hash(i + 7) - 0.5) * 14;
-    const th = hh * (0.035 + 0.04 * hash(i + 31));
-    soft += ellipse(tx, hy + hh * 0.035, hh * 0.03, th, { fill: hillNear });
+  // Layered land: pale far hills, a few irregular tree tufts, mid and near hills, lit meadow.
+  soft += hills(hy + 4, hh * 0.12, 1, hillFar, 0.9);
+  for (let i = 0; i < 14; i++) {
+    if (hash(i + 70) < 0.4) continue;
+    const tx = hash(i + 20) * VIEW_W;
+    const rx = hh * (0.012 + 0.03 * hash(i + 40));
+    const ry = hh * (0.015 + 0.04 * hash(i + 55));
+    soft += ellipse(tx, hy + hh * 0.015, rx, ry, { fill: hillMid, opacity: 0.55 });
   }
-  soft += path(
-    `M-20 ${hy + hh * 0.04} C ${W * 0.2} ${hy - hh * 0.01}, ${W * 0.4} ${hy + hh * 0.05}, ${W * 0.6} ${hy + hh * 0.025} ` +
-      `S ${W * 0.9} ${hy - hh * 0.01}, ${W + 20} ${hy + hh * 0.03} L${W + 20} ${VIEW_H} L-20 ${VIEW_H} Z`,
-    { fill: `url(#${grd})` },
-  );
+  soft += hills(hy + hh * 0.06, hh * 0.09, 9, hillMid, 0.95);
+  soft += hills(hy + hh * 0.13, hh * 0.07, 17, hillNear, 0.95);
+  soft += path(`${smoothOpen([{ x: -60, y: hy + hh * 0.2 }, { x: 120, y: hy + hh * 0.175 }, { x: 300, y: hy + hh * 0.21 }, { x: 460, y: hy + hh * 0.18 }], 1 / 5)} L460 ${VIEW_H} L-60 ${VIEW_H} Z`, { fill: `url(#${grd})` });
   out += `<g filter="url(#${blur})">${soft}</g>`;
-  // A glint of sunlight on the ground at the figure's feet.
-  out += ellipse(VIEW_W / 2, GROUND_Y + 2, 175, 26, { fill: '#ffcf9c', opacity: 0.3 });
+  // Warm haze at the horizon and the sun's light on the land.
+  out += `<rect width="${VIEW_W}" height="${VIEW_H}" fill="url(#${haze})"/>`;
+  out += ellipse(sunX + 40, hy + hh * 0.12, hh * 0.5, hh * 0.1, { fill: '#ffd8a0', opacity: 0.25 });
+  out += ellipse(VIEW_W / 2, GROUND_Y + 2, 175, 26, { fill: '#ffe0b0', opacity: 0.3 });
   return out;
 }
 
@@ -135,9 +145,11 @@ function windowSvg(ctx: Ctx): string {
   const wallDim = darken(mix(bg, '#8a6a70', 0.45), 0.05);
   const floorCol = darken(mix(bg, '#b98a62', 0.6), 0.04);
   const frame = darken(mix(bg, '#d8c0a8', 0.55), 0.08);
-  const ww = Math.max(box.w * 0.42, 62); // window size has a floor so the full view shows a real window
-  const wh = ww * 1.45;
-  const wx = box.x - ww * 0.2;
+  // Tall window sized from the whole picture (head height to chest height in the full view); in the
+  // portrait view only its right part shows behind the head.
+  const ww = Math.max(box.w * 0.42, VIEW_W * 0.2);
+  const wh = Math.max(ww * 1.45, VIEW_H * 0.33);
+  const wx = box.x - ww * 0.55;
   const wy = box.y + box.h * 0.05;
   const defs =
     `<defs><linearGradient id="${wall}" x1="0" y1="0" x2="1" y2="0.6"><stop offset="0" stop-color="${wallLit}"/><stop offset="1" stop-color="${wallDim}"/></linearGradient>` +
@@ -169,9 +181,9 @@ function windowSvg(ctx: Ctx): string {
   const shaft = (x0: number, x1: number, tx0: number, tx1: number, o: number): string =>
     path(`M${x0} ${wy + wh * 0.1} L${x1} ${wy + wh * 0.1} L${tx1} ${fy + 10} L${tx0} ${fy + 10} Z`, { fill: `url(#${beam})`, opacity: o });
   soft +=
-    shaft(wx + ww * 0.55, wx + ww, wx + ww * 1.3, wx + ww * 3.4, 0.9) +
-    shaft(wx + ww * 0.2, wx + ww * 0.5, wx + ww * 0.7, wx + ww * 1.9, 0.6) +
-    shaft(wx + ww * 0.8, wx + ww * 1.05, wx + ww * 2.1, wx + ww * 4.2, 0.5);
+    shaft(wx + ww * 0.55, wx + ww, wx + ww * 1.3, wx + ww * 3.4, 0.65) +
+    shaft(wx + ww * 0.2, wx + ww * 0.5, wx + ww * 0.7, wx + ww * 1.9, 0.45) +
+    shaft(wx + ww * 0.8, wx + ww * 1.05, wx + ww * 2.1, wx + ww * 4.2, 0.35);
   // Floor, baseboard and the window's light patch on it.
   soft += `<rect x="-20" y="${fy}" width="${VIEW_W + 40}" height="${VIEW_H - fy + 20}" fill="url(#${flr})"/>`;
   soft += `<rect x="-20" y="${fy - 6}" width="${VIEW_W + 40}" height="8" fill="${mix(wallLit, wallDim, 0.5)}"/>`;

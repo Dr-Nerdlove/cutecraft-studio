@@ -7,6 +7,7 @@ import { getTheme, onThemeChange, toggleTheme } from './theme';
 import { buildControls, type ControlsHandle } from './controls';
 import { askConfirm, askText, toast } from './dialog';
 import { addToGallery, nextAutoName, openGallery } from './gallery';
+import { openFeedback } from './feedback';
 import { Store } from './store';
 
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text?: string): HTMLElementTagNameMap[K] {
@@ -106,6 +107,13 @@ export function mountApp(root: HTMLElement): void {
     }
   }
 
+  function feedback(): Promise<void> {
+    return openFeedback({
+      settingsCode: () => JSON.stringify(store.character),
+      png: () => svgToPngBlob(currentMode().render(store.character.params, 'fb-', view), 400, 600, 2),
+    });
+  }
+
   const tools: Tool[] = [
     { id: 'random', icon: '🎲', labelKey: 'tool.random', primary: true, run: () => store.replace({ ...store.character, params: currentMode().randomize() }) },
     { id: 'undo', icon: '↩️', labelKey: 'tool.undo', run: () => store.undo() },
@@ -161,7 +169,12 @@ export function mountApp(root: HTMLElement): void {
     themeBtn.type = 'button';
     themeBtn.addEventListener('click', toggleTheme);
     updateThemeBtn();
-    actions.append(modeWrap, themeBtn);
+    const feedbackBtn = h('button', 'feedback-btn');
+    feedbackBtn.type = 'button';
+    feedbackBtn.title = t('header.feedback');
+    feedbackBtn.append(h('span', 'feedback-icon', '💌'), h('span', 'feedback-label', t('header.feedback')));
+    feedbackBtn.addEventListener('click', () => void feedback());
+    actions.append(modeWrap, feedbackBtn, themeBtn);
     header.append(brand, actions);
 
     // stage: preview + tools

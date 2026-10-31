@@ -15,6 +15,7 @@ from the same code.
 - Body, face, eyes, hair, outfit, accessories and background, all as sliders, colour swatches (plus custom
   colours), option chips and switches.
 - Randomize (harmonious colours), reset, undo / redo, save to a gallery, export as PNG (2x).
+- Feedback button: sends a message with a picture and a settings code through the system share menu (or copies it).
 - Light and dark look: follows the system, with a switch in the header.
 - German and English, chosen automatically from the system language (German if the system is German, otherwise English).
 - Works offline: no external fonts, scripts or services. Saved characters stay in the browser (`localStorage`).

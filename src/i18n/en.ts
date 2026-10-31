@@ -8,6 +8,16 @@ export const en: Dictionary = {
   'header.mode': 'Style',
   'mode.anime': 'Anime',
 
+  'header.feedback': 'Feedback',
+  'feedback.title': 'Your feedback',
+  'feedback.placeholder': 'What do you like? What is missing? What looks odd?',
+  'feedback.hint': 'Your feedback only goes to the person you pick in the share menu. Your picture and settings are sent along.',
+  'feedback.send': 'Send',
+  'feedback.sending': 'Just a moment …',
+  'feedback.thanks': 'Thanks for your feedback!',
+  'feedback.copied': 'Text copied and picture downloaded. Paste the text into a message and attach the picture.',
+  'feedback.failed': 'Sorry, sending did not work.',
+
   'tool.random': 'Randomize',
   'tool.reset': 'Reset',
   'tool.undo': 'Undo',

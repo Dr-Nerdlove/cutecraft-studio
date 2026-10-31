@@ -7,6 +7,16 @@ export const de = {
   'header.mode': 'Stil',
   'mode.anime': 'Anime',
 
+  'header.feedback': 'Feedback',
+  'feedback.title': 'Dein Feedback',
+  'feedback.placeholder': 'Was gefällt dir? Was fehlt dir? Was ist komisch?',
+  'feedback.hint': 'Dein Feedback geht nur an die Person, die du im Teilen-Menü auswählst. Dein Bild und deine Einstellungen werden mitgeschickt.',
+  'feedback.send': 'Senden',
+  'feedback.sending': 'Einen Moment …',
+  'feedback.thanks': 'Danke für dein Feedback!',
+  'feedback.copied': 'Text kopiert und Bild heruntergeladen. Füge den Text in eine Nachricht ein und hänge das Bild an.',
+  'feedback.failed': 'Das Senden hat leider nicht geklappt.',
+
   'tool.random': 'Zufall',
   'tool.reset': 'Zurücksetzen',
   'tool.undo': 'Rückgängig',

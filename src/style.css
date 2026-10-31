@@ -962,3 +962,75 @@ button {
   font-size: 1.1rem;
   line-height: 1;
 }
+
+/* ---------- feedback ---------- */
+
+.feedback-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.feedback-icon {
+  font-size: 1.05rem;
+}
+
+@media (max-width: 479px) {
+  .feedback-btn {
+    width: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .feedback-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+.text-area {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  padding: 12px 16px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.text-area:focus {
+  border-color: var(--pink);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--pink-soft);
+}
+
+.modal-hint {
+  margin: 10px 2px 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -1,13 +1,13 @@
 import { t } from '../i18n';
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: string): HTMLElementTagNameMap[K] {
+export function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
   e.className = cls;
   if (text !== undefined) e.textContent = text;
   return e;
 }
 
-function openModal(build: (close: (result: unknown) => void, box: HTMLElement) => HTMLElement | null): Promise<unknown> {
+export function openModal(build: (close: (result: unknown) => void, box: HTMLElement) => HTMLElement | null): Promise<unknown> {
   return new Promise((resolve) => {
     const previous = document.activeElement as HTMLElement | null;
     const overlay = el('div', 'modal-overlay');

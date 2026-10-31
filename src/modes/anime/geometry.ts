@@ -71,12 +71,17 @@ export function computeGeo(p: AnimeParams): Geo {
   const shoeH = clamp(u * 0.09, 11, 18);
   const yAnkle = -shoeH;
 
-  const build = p.build / 100;
-  const sh = p.shoulders / 100;
+  // Below a slider's default the range is stretched past the old minimum (slimmer); at or above the
+  // default the mapping is exactly the old value / 100, so existing figures do not change.
+  const slimT = (v: number, def: number, lo: number): number => (v >= def ? v / 100 : lerp(lo, def / 100, v / def));
+  const build = slimT(p.build, 40, -0.5);
+  const sh = slimT(p.shoulders, 45, -0.3);
+  const waistT = slimT(p.waist, 40, -0.4);
+  const hipsT = slimT(p.hips, 50, -0.3);
   const flat = (1 - k) * 0.7; // chibi bodies are simple beans
   const shW = headW * lerp(0.6, 1.12, k) * lerp(0.84, 1.16, sh) * lerp(0.95, 1.07, build);
-  const waistW = lerp(shW * lerp(0.58, 0.92, p.waist / 100) * lerp(0.92, 1.1, build), shW * 0.95, flat);
-  const hipW = lerp(shW * lerp(0.66, 1.22, p.hips / 100) * lerp(0.93, 1.1, build), shW * 0.98, flat);
+  const waistW = lerp(shW * lerp(0.58, 0.92, waistT) * lerp(0.92, 1.1, build), shW * 0.95, flat);
+  const hipW = lerp(shW * lerp(0.66, 1.22, hipsT) * lerp(0.93, 1.1, build), shW * 0.98, flat);
 
   const armR = u * lerp(0.075, 0.092, k) * lerp(0.92, 1.12, build);
   const armLen = torsoLen * lerp(0.86, 1.22, k);

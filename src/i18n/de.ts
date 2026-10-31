@@ -205,4 +205,5 @@ export const de = {
   'a.bgPattern.hearts': 'Herzen',
   'a.bgPattern.stars': 'Sterne',
   'a.bgPattern.gradient': 'Verlauf',
+  'a.bgPattern.bokeh': 'Lichter',
 } as const;

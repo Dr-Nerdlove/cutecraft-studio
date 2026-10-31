@@ -49,20 +49,23 @@ export const VIEW_W = 400;
 export const VIEW_H = 600;
 export const GROUND_Y = 552;
 
-const FACE_RATIO = { round: 0.94, oval: 0.85, heart: 0.89, square: 0.93 } as const;
+// Semi-realistic faces: a bit narrower and longer than classic anime faces.
+const FACE_RATIO = { round: 0.9, oval: 0.81, heart: 0.85, square: 0.89 } as const;
 
 export function computeGeo(p: AnimeParams): Geo {
   // Normal anime proportions only; the saved `proportion` value is ignored.
   const k = 1;
   const H = 500;
-  const u = H * lerp(0.5, 1 / 6.5, k);
+  // about 7 heads tall: a grown-up, semi-realistic figure
+  const u = H * lerp(0.5, 1 / 7.1, k);
   const headW = u * FACE_RATIO[p.faceShape] * lerp(1.1, 0.93, k);
   const hw = headW / 2;
-  const lw = clamp(u * 0.0125, 1.15, 3);
+  // fine, light line art
+  const lw = clamp(u * 0.0085, 0.8, 2.2);
 
   const yTop = -H;
   const yChin = yTop + u;
-  const neckLen = u * lerp(0.05, 0.1, k);
+  const neckLen = u * lerp(0.05, 0.16, k);
   const yShoulder = yChin + neckLen;
   const R = H - u - neckLen;
   const torsoLen = R * lerp(0.52, 0.4, k);
@@ -79,11 +82,11 @@ export function computeGeo(p: AnimeParams): Geo {
   const waistT = slimT(p.waist, 40, -0.4);
   const hipsT = slimT(p.hips, 50, -0.3);
   const flat = (1 - k) * 0.7; // chibi bodies are simple beans
-  const shW = headW * lerp(0.6, 1.12, k) * lerp(0.84, 1.16, sh) * lerp(0.95, 1.07, build);
+  const shW = headW * lerp(0.6, 1.42, k) * lerp(0.84, 1.16, sh) * lerp(0.95, 1.07, build);
   const waistW = lerp(shW * lerp(0.58, 0.92, waistT) * lerp(0.92, 1.1, build), shW * 0.95, flat);
   const hipW = lerp(shW * lerp(0.66, 1.22, hipsT) * lerp(0.93, 1.1, build), shW * 0.98, flat);
 
-  const armR = u * lerp(0.075, 0.092, k) * lerp(0.92, 1.12, build);
+  const armR = u * lerp(0.075, 0.098, k) * lerp(0.92, 1.12, build);
   const armLen = torsoLen * lerp(0.86, 1.22, k);
 
   const hipHW = hipW / 2;
@@ -94,7 +97,7 @@ export function computeGeo(p: AnimeParams): Geo {
 
   const geo: Geo = {
     k, H, u, headW, hw, lw, yTop, yChin, yShoulder, yCrotch, yAnkle, shoeH, torsoLen, legLen,
-    neckHW: headW * lerp(0.115, 0.085, k),
+    neckHW: headW * lerp(0.115, 0.098, k),
     shHW: shW / 2, waistHW: waistW / 2, hipHW,
     chestBulge: lerp(0.0, 0.07, build) * (shW / 2),
     armR, armLen, armAngle: lerp(0.1, 0.085, k),
@@ -169,9 +172,10 @@ export function faceRel(g: Geo, shape: AnimeParams['faceShape'], t: number): num
       break;
     }
   }
-  // grown-up faces get a slimmer jaw
-  const jaw = clamp((tt - 0.55) / 0.45, 0, 1);
-  return rel * (1 - 0.12 * g.k * jaw);
+  // semi-realistic faces: widest at the cheekbones, tapering to a slim, soft chin
+  const jaw = clamp((tt - 0.5) / 0.5, 0, 1);
+  // (the heart shape already narrows a lot, so its jaw is slimmed less)
+  return rel * (1 - (shape === 'heart' ? 0.1 : 0.24) * g.k * Math.pow(jaw, 1.5));
 }
 
 export function faceHalfWidthAt(g: Geo, shape: AnimeParams['faceShape'], y: number): number {

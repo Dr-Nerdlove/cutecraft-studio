@@ -120,7 +120,9 @@ export function neckSvg(ctx: Ctx): string {
   const nk = g.neckHW;
   const d =
     M(-nk, top) + L(nk, top) + C(nk, g.yChin, nk * 1.05, bot - 2, nk * 1.25, bot) + L(-nk * 1.25, bot) + C(-nk * 1.05, bot - 2, -nk, g.yChin, -nk, top) + 'Z';
-  return cel(ctx, d, ctx.skin, { line: ctx.skinLine, shadeColor: ctx.skinShade, dx: -g.lw * 1.4, dy: -g.lw * 0.5 });
+  // soft shadow cast by the head onto the neck
+  const chinShadow = ellipse(g.u * 0.02, g.yChin - g.u * 0.02, nk * 1.5, g.u * 0.11, { fill: mix(ctx.skinShade, '#7a5a60', 0.25), opacity: 0.55, filter: `url(#${ctx.soft})` });
+  return cel(ctx, d, ctx.skin, { line: ctx.skinLine, shadeColor: ctx.skinShade, dx: -g.lw * 1.4, dy: -g.lw * 0.5, inside: chinShadow });
 }
 
 // ---- arms -------------------------------------------------------------------------------------

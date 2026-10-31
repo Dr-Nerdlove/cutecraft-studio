@@ -31,7 +31,7 @@ export interface AnimeParams {
   headAccColor: string;
   glasses: 'none' | 'round' | 'heart';
   bgColor: string;
-  bgPattern: 'plain' | 'dots' | 'hearts' | 'stars' | 'gradient';
+  bgPattern: 'plain' | 'dots' | 'hearts' | 'stars' | 'gradient' | 'bokeh';
 }
 
 const longHair = (p: Params): boolean => ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid', 'hime', 'drills'].includes(p.hairBack as string);
@@ -56,20 +56,20 @@ export const animeCategories: readonly Category[] = [
       choice('faceShape', 'a.faceShape', [
         { value: 'round', labelKey: 'a.faceShape.round' }, { value: 'oval', labelKey: 'a.faceShape.oval' },
         { value: 'heart', labelKey: 'a.faceShape.heart' }, { value: 'square', labelKey: 'a.faceShape.square' },
-      ], 'round'),
-      slider('blush', 'a.blush', 0, 100, 1, 55),
+      ], 'oval'),
+      slider('blush', 'a.blush', 0, 100, 1, 40),
       color('blushColor', 'a.blushColor', BLUSH_COLORS, '#ff9fb2'),
       toggle('freckles', 'a.freckles', false),
       choice('nose', 'a.nose', [
         { value: 'dot', labelKey: 'a.nose.dot' }, { value: 'line', labelKey: 'a.nose.line' }, { value: 'none', labelKey: 'a.nose.none' },
         { value: 'button', labelKey: 'a.nose.button' }, { value: 'defined', labelKey: 'a.nose.defined' }, { value: 'soft', labelKey: 'a.nose.soft' },
-      ], 'dot'),
+      ], 'defined'),
       choice('mouth', 'a.mouth', [
         { value: 'smile', labelKey: 'a.mouth.smile' }, { value: 'open', labelKey: 'a.mouth.open' },
         { value: 'cat', labelKey: 'a.mouth.cat' }, { value: 'o', labelKey: 'a.mouth.o' },
         { value: 'pout', labelKey: 'a.mouth.pout' }, { value: 'fang', labelKey: 'a.mouth.fang' },
         { value: 'lips', labelKey: 'a.mouth.lips' }, { value: 'smirk', labelKey: 'a.mouth.smirk' }, { value: 'grin', labelKey: 'a.mouth.grin' },
-      ], 'smile'),
+      ], 'lips'),
       slider('mouthSize', 'a.mouthSize', 0, 100, 1, 50),
       choice('brow', 'a.brow', [
         { value: 'soft', labelKey: 'a.brow.soft' }, { value: 'straight', labelKey: 'a.brow.straight' },
@@ -122,7 +122,7 @@ export const animeCategories: readonly Category[] = [
       color('hairTip', 'a.hairTip', HAIR_COLORS, '#f6a6c9'),
       slider('tipStrength', 'a.tipStrength', 0, 100, 1, 0),
       slider('hairLength', 'a.hairLength', 0, 100, 1, 55, { showIf: longHair }),
-      toggle('ahoge', 'a.ahoge', true),
+      toggle('ahoge', 'a.ahoge', false),
     ],
   },
   {
@@ -167,7 +167,7 @@ export const animeCategories: readonly Category[] = [
       choice('bgPattern', 'a.bgPattern', [
         { value: 'plain', labelKey: 'a.bgPattern.plain' }, { value: 'dots', labelKey: 'a.bgPattern.dots' },
         { value: 'hearts', labelKey: 'a.bgPattern.hearts' }, { value: 'stars', labelKey: 'a.bgPattern.stars' },
-        { value: 'gradient', labelKey: 'a.bgPattern.gradient' },
+        { value: 'gradient', labelKey: 'a.bgPattern.gradient' }, { value: 'bokeh', labelKey: 'a.bgPattern.bokeh' },
       ], 'hearts'),
     ],
   },

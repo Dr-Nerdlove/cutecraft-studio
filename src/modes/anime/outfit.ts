@@ -2,7 +2,7 @@ import { darken, lighten, luminance, mix, outline, shade } from '../../core/colo
 import {
   C, L, M, Q, ellipse, group, heartPath, lerp, path, smoothOpen, type Pt,
 } from '../../core/svg';
-import { armSlice, legAt } from './body';
+import { SH_F, armPoint, armSlice, edgeDown, edgeUp, legAt, shoulderAt, shoulderGeo } from './body';
 import { cel, flat, stroke, type Ctx } from './context';
 import { torsoHW, type Geo } from './geometry';
 
@@ -30,11 +30,13 @@ function skirtSvg(ctx: Ctx, color: string, hemY: number, hemHW: number, pleats =
   const yHip = g.yShoulder + g.torsoLen * 0.88;
   const d = flaredSkirtPath(g, yW, torsoHW(g, yW, 1.6), yHip, g.hipHW + 1.8, hemY, hemHW, 6);
   let inside = '';
+  let folds = '';
   if (pleats) {
     const top = torsoHW(g, yW, 1.6);
     for (const f of [-0.66, -0.33, 0, 0.33, 0.66]) {
-      inside += stroke(ctx, `${M(top * f * 0.9, yW + g.torsoLen * 0.06)}${Q(hemHW * f * 0.85, (yW + hemY) / 2, hemHW * f * 1.02, hemY - 1)}`, shade(color, 1.3), g.lw * 0.8, { opacity: 0.55 });
+      folds += stroke(ctx, `${M(top * f * 0.9, yW + g.torsoLen * 0.06)}${Q(hemHW * f * 0.85, (yW + hemY) / 2, hemHW * f * 1.02, hemY - 1)}`, shade(color, 1.4), g.lw * 2.6, { opacity: 0.38 });
     }
+    inside = lightSide(ctx, color, true) + soft(ctx, folds);
   }
   return cel(ctx, d, color, { dx: -g.lw * 2.2, dy: -g.lw * 0.6, inside });
 }
@@ -102,10 +104,14 @@ export function bottomSvg(ctx: Ctx): string {
   );
   // centre seam
   inside += stroke(ctx, `${M(0, yW + bandH)}${L(0, g.yCrotch - 2)}`, shade(c, 1.4), g.lw * 0.7, { opacity: 0.6 });
+  inside = lightSide(ctx, c, true) + inside;
   return cel(ctx, pantsPath(g, tEnd, 1.5, flare), c, { dx: -g.lw * 1.5, dy: -g.lw * 0.4, inside });
 }
 
 // ---- tops -------------------------------------------------------------------------------------
+
+/** Garments sit this much outside the skin; sleeves hug the arm with the same small growth. */
+const RG = 1.2;
 
 interface TopOptions {
   hemY: number;
@@ -113,26 +119,95 @@ interface TopOptions {
   neckDepth?: number;
   vNeck?: boolean;
   bow?: number;
+  /** Where the neckline starts along the shoulder line (0 = at the neck, larger = wider scoop). */
+  tN?: number;
+}
+
+/** Neckline: the left start point and the curve from the right end back to it. */
+function neckCurve(g: Geo, o: TopOptions): { nl: Pt; nr: Pt; seg: string } {
+  const nl = shoulderGeo(g, -1, RG, o.grow ?? 1.6, o.tN ?? 0).b[0];
+  const nr = { x: -nl.x, y: nl.y };
+  const depth = o.neckDepth ?? g.torsoLen * 0.05;
+  const seg = o.vNeck ? `${L(0, g.yShoulder + depth * 3.2)}${L(nl.x, nl.y)}` : Q(0, g.yShoulder + depth * 2, nl.x, nl.y);
+  return { nl, nr, seg };
 }
 
 function topPath(g: Geo, o: TopOptions): string {
   const grow = o.grow ?? 1.6;
-  const steps = 12;
-  const left: Pt[] = [];
-  for (let i = 0; i <= steps; i++) {
-    const y = lerp(g.yShoulder, o.hemY, i / steps);
-    left.push({ x: -torsoHW(g, y, grow), y });
-  }
-  const right = left.map((q) => ({ x: -q.x, y: q.y })).reverse();
-  const depth = o.neckDepth ?? g.torsoLen * 0.05;
-  const neck = o.vNeck
-    ? `${L(0, g.yShoulder + depth * 3.2)}${L(left[0].x, left[0].y)}`
-    : Q(0, g.yShoulder + depth * 2, left[0].x, left[0].y);
+  const tN = o.tN ?? 0;
+  const { nl, seg } = neckCurve(g, o);
+  const hw = torsoHW(g, o.hemY, grow);
   return (
-    M(left[0].x, left[0].y) + smoothOpen(left, 1 / 6, false) +
-    Q(0, o.hemY + (o.bow ?? g.torsoLen * 0.03), right[0].x, right[0].y) +
-    smoothOpen(right, 1 / 6, false) + neck + 'Z'
+    M(nl.x, nl.y) + edgeDown(g, RG, grow, tN, o.hemY) +
+    Q(0, o.hemY + (o.bow ?? g.torsoLen * 0.03), hw, o.hemY) +
+    edgeUp(g, RG, grow, tN, o.hemY) + seg + 'Z'
   );
+}
+
+/** Light from the upper left: a lighter garment side and a deeper shadow side on the right. */
+function lightSide(ctx: Ctx, c: string, horizontal = false): string {
+  const { g } = ctx;
+  const id = ctx.uid('fls');
+  const sh = horizontal ? Math.max(g.shHW, g.hipHW) : g.shHW;
+  const yS = g.yShoulder;
+  const yEnd = horizontal ? yS - g.torsoLen * 0.05 : yS + g.torsoLen * 0.6;
+  return (
+    `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${(-sh * 1.1).toFixed(1)}" y1="${(yS - g.torsoLen * 0.05).toFixed(1)}" x2="${(sh * 1.25).toFixed(1)}" y2="${yEnd.toFixed(1)}">` +
+    `<stop offset="0" stop-color="${lighten(c, 0.12)}" stop-opacity="0.7"/><stop offset="0.45" stop-color="${c}" stop-opacity="0"/>` +
+    `<stop offset="0.6" stop-color="${foldColor(c)}" stop-opacity="0"/><stop offset="1" stop-color="${foldColor(c)}" stop-opacity="0.5"/></linearGradient>` +
+    `<rect x="${(-sh * 3).toFixed(1)}" y="${(yS - g.u * 0.3).toFixed(1)}" width="${(sh * 6).toFixed(1)}" height="${(g.torsoLen * 2.4).toFixed(1)}" fill="url(#${id})"/>`
+  );
+}
+
+/** Colour of fold shadows: darker, slightly cool and less saturated than the cel shade. */
+const foldColor = (c: string): string => mix(shade(c, 1.4), '#7a5a86', 0.28);
+
+/** One blurred group (a single filter pass for all its strokes). */
+const soft = (ctx: Ctx, inner: string): string => (inner ? group(inner, { filter: `url(#${ctx.soft})` }) : '');
+
+const LONG_HAIR = ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid', 'hime', 'drills', 'bob'];
+
+/**
+ * Painted shading for the upper body of a garment: light and shadow side, soft folds from the
+ * armpits and at the waist, highlights on the lit side, the shadow of chin and hair near the neck.
+ * `neckD` is the neckline curve (shadow along it); everything is meant to be clipped by `cel`.
+ */
+function fabricShade(ctx: Ctx, c: string, o: { neckD?: string; waist?: boolean } = {}): string {
+  const { g, p } = ctx;
+  const T = g.torsoLen, yS = g.yShoulder;
+  const sL = shoulderGeo(g, -1, RG, 0);
+  const cx = Math.abs(sL.ctr.x), cy = sL.ctr.y, R = sL.R;
+  const dk = foldColor(c);
+  const lt = lighten(c, 0.13);
+  const W = g.lw * 3.2;
+  let dark = '';
+  let light = '';
+  for (const s of [-1, 1] as const) {
+    // folds running from the armpit across the chest
+    const ax = s * (cx - R * 1.05), ay = cy + R * 1.0;
+    dark += stroke(ctx, `${M(ax, ay)}${Q(s * cx * 0.62, cy + T * 0.13, s * cx * 0.36, cy + T * 0.27)}`, dk, W * 1.4, { opacity: 0.55 });
+    dark += stroke(ctx, `${M(ax - s * 1.5, ay + T * 0.07)}${Q(s * cx * 0.66, cy + T * 0.2, s * cx * 0.5, cy + T * 0.33)}`, dk, W * 1.1, { opacity: 0.4 });
+    // dark crease right in the armpit
+    dark += ellipse(s * (cx - R * 0.8), ay + R * 0.3, R * 0.5, R * 0.9, { fill: dk, opacity: 0.5 });
+    if (o.waist !== false) {
+      const wy = waistY(g), wh = g.waistHW;
+      dark += stroke(ctx, `${M(s * wh * 0.96, wy - T * 0.03)}${Q(s * wh * 0.62, wy + T * 0.01, s * wh * 0.28, wy + T * 0.015)}`, dk, W * 1.2, { opacity: 0.42 });
+    }
+    // the shoulder under the hair is in the shade
+    const sh = shoulderGeo(g, s, RG, 0);
+    const a0 = shoulderAt(sh, 0.12), a1 = shoulderAt(sh, 0.55), a2 = shoulderAt(sh, 0.95);
+    const hairK = LONG_HAIR.includes(p.hairBack as string) ? 1 : 0.5;
+    dark += stroke(ctx, `${M(a0.x, a0.y + g.u * 0.05)}${Q(a1.x, a1.y + g.u * 0.07, a2.x, a2.y + g.u * 0.07)}`, dk, g.u * 0.12, { opacity: 0.42 * hairK });
+  }
+  // highlights on the lit (left) side
+  light += stroke(ctx, `${M(-cx * 0.5, yS + T * 0.11)}${Q(-cx * 0.8, yS + T * 0.17, -cx * 0.9, yS + T * 0.32)}`, lt, W * 1.5, { opacity: 0.6 });
+  light += stroke(ctx, `${M(-cx * 0.62, yS + T * 0.42)}${Q(-cx * 0.66, yS + T * 0.52, -g.waistHW * 0.9, yS + T * 0.6)}`, lt, W * 1.2, { opacity: 0.45 });
+  const h0 = shoulderAt(sL, 0.4), h1 = shoulderAt(sL, 0.85);
+  light += stroke(ctx, `${M(h0.x, h0.y + 2.2)}${L(h1.x, h1.y + 2.6)}`, lt, W * 1.2, { opacity: 0.55 });
+  // shadow of the chin and head on the chest, and along the neckline
+  dark += ellipse(g.u * 0.02, yS + T * 0.035, g.neckHW * 2.4, g.u * 0.09, { fill: mix(foldColor(c), '#5a3a60', 0.35), opacity: 0.5 });
+  if (o.neckD) dark += path(o.neckD, { fill: 'none', stroke: dk, 'stroke-width': W * 1.5, opacity: 0.55, transform: `translate(0 ${(g.lw * 1.6).toFixed(2)})` });
+  return lightSide(ctx, c) + soft(ctx, dark) + soft(ctx, light);
 }
 
 export function bowSvg(ctx: Ctx, x: number, y: number, s: number, color: string): string {
@@ -151,46 +226,61 @@ export function topSvg(ctx: Ctx): string {
   const T = g.torsoLen;
   const yS = g.yShoulder;
   let out = '';
+  const neckPath = (o: TopOptions): string => {
+    const { nr, seg } = neckCurve(g, o);
+    return M(nr.x, nr.y) + seg;
+  };
 
   switch (p.top) {
     case 'tshirt': {
       const hem = g.yCrotch - T * 0.12;
-      const print = path(heartPath(0, yS + T * 0.34, Math.max(3, g.u * 0.045)), { fill: mix(c, '#ff7aa8', 0.55), opacity: 0.9 });
-      out += cel(ctx, topPath(g, { hemY: hem }), c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside: print });
+      const o: TopOptions = { hemY: hem };
+      const print = path(heartPath(0, yS + T * 0.34, Math.max(3, g.u * 0.045)), { fill: mix(c, '#ff7aa8', 0.55), opacity: 0.85 });
+      out += cel(ctx, topPath(g, o), c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside: fabricShade(ctx, c, { neckD: neckPath(o) }) + print });
       break;
     }
     case 'hoodie': {
       const hem = g.yCrotch + T * 0.0;
+      const o: TopOptions = { hemY: hem, neckDepth: T * 0.035, grow: 2 };
       const px = torsoHW(g, yS + T * 0.7) * 0.62;
       const pocket = path(`${M(-px, yS + T * 0.66)}${L(px, yS + T * 0.66)}${L(px * 1.12, hem - T * 0.05)}${L(-px * 1.12, hem - T * 0.05)}Z`, {
-        fill: shade(c, 0.5), stroke: shade(c, 1.5), 'stroke-width': g.lw * 0.8, 'stroke-linejoin': 'round', opacity: 0.85,
+        fill: shade(c, 0.5), stroke: shade(c, 1.5), 'stroke-width': g.lw * 0.8, 'stroke-linejoin': 'round', opacity: 0.6,
       });
       const cords =
         stroke(ctx, `${M(-g.neckHW * 0.55, yS + T * 0.06)}${Q(-g.neckHW * 0.6, yS + T * 0.2, -g.neckHW * 0.5, yS + T * 0.3)}`, lighten(c, 0.2), g.lw * 1.1) +
         stroke(ctx, `${M(g.neckHW * 0.55, yS + T * 0.06)}${Q(g.neckHW * 0.6, yS + T * 0.2, g.neckHW * 0.5, yS + T * 0.3)}`, lighten(c, 0.2), g.lw * 1.1);
-      out += cel(ctx, topPath(g, { hemY: hem, neckDepth: T * 0.035, grow: 2 }), c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside: pocket });
+      out += cel(ctx, topPath(g, o), c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside: fabricShade(ctx, c, { neckD: neckPath(o) }) + pocket });
       // ribbed hem
-      out += path(`${M(-torsoHW(g, hem - T * 0.05, 2), hem - T * 0.05)}${L(torsoHW(g, hem - T * 0.05, 2), hem - T * 0.05)}`, { stroke: shade(c, 1.4), 'stroke-width': g.lw * 0.8, opacity: 0.6 });
+      out += path(`${M(-torsoHW(g, hem - T * 0.05, 2), hem - T * 0.05)}${L(torsoHW(g, hem - T * 0.05, 2), hem - T * 0.05)}`, { stroke: shade(c, 1.4), 'stroke-width': g.lw * 0.8, opacity: 0.5 });
       out += cords;
       break;
     }
     case 'sailor': {
       const hem = yS + T * 0.78;
-      out += cel(ctx, topPath(g, { hemY: hem, vNeck: true, neckDepth: T * 0.075, bow: T * 0.02 }), c, { dx: -g.lw * 2, dy: -g.lw * 0.5 });
+      const o: TopOptions = { hemY: hem, vNeck: true, neckDepth: T * 0.075, bow: T * 0.02, tN: 0.12 };
+      const topD = topPath(g, o);
+      out += cel(ctx, topD, c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside: fabricShade(ctx, c) });
       const collar = luminance(c) > 0.62 ? mix(c, '#3a4a8a', 0.72) : lighten(c, 0.5);
-      const nk = g.neckHW * 1.35;
+      // collar: follows the shoulder line, then falls diagonally to the V tip
+      const sl = shoulderGeo(g, -1, RG + 0.8, 2.4);
+      const pts = [0, 0.3, 0.6, 0.8, 0.93].map((t) => shoulderAt(sl, t));
+      const S = pts[pts.length - 1];
       const sh = g.shHW;
+      const rp = pts.map((q) => ({ x: -q.x, y: q.y })).reverse();
       const cd =
-        M(-nk, yS - 1) + C(-sh * 0.55, yS - 1, -sh * 0.9, yS + T * 0.02, -sh * 0.9, yS + T * 0.1) +
-        C(-sh * 0.8, yS + T * 0.22, -sh * 0.5, yS + T * 0.3, 0, yS + T * 0.42) +
-        C(sh * 0.5, yS + T * 0.3, sh * 0.8, yS + T * 0.22, sh * 0.9, yS + T * 0.1) +
-        C(sh * 0.9, yS + T * 0.02, sh * 0.55, yS - 1, nk, yS - 1) +
-        L(0, yS + T * 0.27) + 'Z';
+        M(pts[0].x, pts[0].y) + smoothOpen(pts, 1 / 6, false) +
+        C(S.x - 1, S.y + T * 0.08, -sh * 0.55, yS + T * 0.3, 0, yS + T * 0.42) +
+        C(sh * 0.55, yS + T * 0.3, -S.x + 1, S.y + T * 0.08, -S.x, S.y) +
+        smoothOpen(rp, 1 / 6, false) + L(0, yS + T * 0.27) + 'Z';
       const stripes = ctx.uid('stripe');
       out += `<clipPath id="${stripes}">${path(cd)}</clipPath>`;
-      out += cel(ctx, cd, collar, { dx: -g.lw * 1.2, dy: -g.lw * 0.5 });
+      // the collar throws a soft shadow onto the blouse
+      const clipTop = ctx.uid('stclip');
+      out += `<clipPath id="${clipTop}">${path(topD)}</clipPath>`;
+      out += group(path(cd, { fill: mix(foldColor(c), '#5a3a60', 0.35), opacity: 0.4, transform: `translate(${g.lw.toFixed(2)} ${(g.lw * 2.6).toFixed(2)})`, filter: `url(#${ctx.soft})` }), { 'clip-path': `url(#${clipTop})` });
+      out += cel(ctx, cd, collar, { dx: -g.lw * 1.2, dy: -g.lw * 0.5, inside: lightSide(ctx, collar) });
       out += group(
-        stroke(ctx, `${M(-sh * 0.86, yS + T * 0.1)}${C(-sh * 0.75, yS + T * 0.2, -sh * 0.48, yS + T * 0.28, 0, yS + T * 0.38)}${C(sh * 0.48, yS + T * 0.28, sh * 0.75, yS + T * 0.2, sh * 0.86, yS + T * 0.1)}`, '#ffffff', g.lw * 0.9, { opacity: 0.9 }),
+        stroke(ctx, `${M(S.x * 0.95, S.y + T * 0.03)}${C(-sh * 0.75, yS + T * 0.2, -sh * 0.48, yS + T * 0.28, 0, yS + T * 0.38)}${C(sh * 0.48, yS + T * 0.28, sh * 0.75, yS + T * 0.2, -S.x * 0.95, S.y + T * 0.03)}`, '#ffffff', g.lw * 0.9, { opacity: 0.85 }),
         { 'clip-path': `url(#${stripes})` },
       );
       const ribbon = luminance(collar) < 0.5 ? '#ff8fb8' : '#e84a5f';
@@ -206,31 +296,26 @@ export function topSvg(ctx: Ctx): string {
         { fill: band },
       );
       for (let x = -0.8; x <= 0.81; x += 0.2) {
-        inside += stroke(ctx, `${M(torsoHW(g, hem, 0) * x, hem - bandH)}${L(torsoHW(g, hem, 0) * x, hem)}`, shade(c, 1.5), g.lw * 0.6, { opacity: 0.5 });
+        inside += stroke(ctx, `${M(torsoHW(g, hem, 0) * x, hem - bandH)}${L(torsoHW(g, hem, 0) * x, hem)}`, shade(c, 1.5), g.lw * 0.6, { opacity: 0.4 });
       }
       // knit stripes
-      inside += stroke(ctx, `${M(-torsoHW(g, yS + T * 0.45, 3), yS + T * 0.45)}${L(torsoHW(g, yS + T * 0.45, 3), yS + T * 0.45)}`, lighten(c, 0.14), g.lw * 1.3, { opacity: 0.8 });
-      out += cel(ctx, topPath(g, { hemY: hem, neckDepth: T * 0.015, grow: 2 }), c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside });
+      inside += stroke(ctx, `${M(-torsoHW(g, yS + T * 0.45, 3), yS + T * 0.45)}${L(torsoHW(g, yS + T * 0.45, 3), yS + T * 0.45)}`, lighten(c, 0.14), g.lw * 1.3, { opacity: 0.6 });
+      const o: TopOptions = { hemY: hem, neckDepth: T * 0.015, grow: 2 };
+      out += cel(ctx, topPath(g, o), c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside: fabricShade(ctx, c) + inside });
       // turtleneck collar
       const ch = Math.max(g.u * 0.07, 5);
       const cw = g.neckHW * 1.28;
-      out += cel(ctx, M(-cw, yS - ch) + Q(0, yS - ch - 1.5, cw, yS - ch) + L(cw * 1.08, yS + 2) + Q(0, yS + 4, -cw * 1.08, yS + 2) + 'Z', band, { dx: -g.lw, dy: -g.lw * 0.4 });
+      const roll = ellipse(g.u * 0.01, yS + 3, cw * 0.9, ch * 0.3, { fill: shade(band, 1.5), opacity: 0.35, filter: `url(#${ctx.soft})` });
+      out += cel(ctx, M(-cw, yS - ch) + Q(0, yS - ch - 1.5, cw, yS - ch) + L(cw * 1.08, yS + 2) + Q(0, yS + 4, -cw * 1.08, yS + 2) + 'Z', band, { dx: -g.lw, dy: -g.lw * 0.4, inside: roll });
       break;
     }
     case 'dress': {
-      const yW = waistY(g) - g.torsoLen * 0.03;
+      const yW = waistY(g) - T * 0.03;
       const hemY = g.yCrotch + g.legLen * 0.42;
       const hemHW = g.hipHW * 1.12 + g.u * 0.16;
-      const hipY = g.yShoulder + T * 0.9;
-      const left: Pt[] = [];
-      const steps = 8;
-      for (let i = 0; i <= steps; i++) {
-        const y = lerp(yS, yW, i / steps);
-        left.push({ x: -torsoHW(g, y, 1.6), y });
-      }
+      const hipY = yS + T * 0.9;
+      const o: TopOptions = { hemY, grow: 1.6, tN: 0.38, neckDepth: T * 0.045 };
       const sk: Pt[] = [{ x: -(torsoHW(g, yW, 1.6) + 0.5), y: yW }, { x: -(g.hipHW + 2.5), y: hipY }, { x: -hemHW, y: hemY }];
-      const skR = sk.map((q) => ({ x: -q.x, y: q.y })).reverse();
-      const rightB = left.map((q) => ({ x: -q.x, y: q.y })).reverse();
       const dip = g.u * 0.03;
       const scallops = 6;
       let hem = '';
@@ -239,17 +324,19 @@ export function topSvg(ctx: Ctx): string {
         const x0 = -hemHW + w * i;
         hem += Q(x0 + w / 2, hemY + dip * 2, x0 + w, hemY);
       }
+      // bodice edge down to the waist, then the skirt points
+      const { nl, seg } = neckCurve(g, o);
       const d =
-        M(left[0].x, left[0].y) + smoothOpen(left.concat(sk.slice(1)), 1 / 6, false) + hem +
-        smoothOpen(skR.concat(rightB.slice(1)), 1 / 6, false) +
-        Q(0, yS + T * 0.1, left[0].x, left[0].y) + 'Z';
-      let inside = '';
+        M(nl.x, nl.y) + edgeDown(g, RG, 1.6, o.tN ?? 0, yW, sk) + hem +
+        edgeUp(g, RG, 1.6, o.tN ?? 0, yW, sk) + seg + 'Z';
+      let pleats = '';
       for (const f of [-0.62, -0.31, 0, 0.31, 0.62]) {
-        inside += stroke(ctx, `${M(torsoHW(g, yW) * f, yW + 2)}${Q(hemHW * f * 0.8, (yW + hemY) / 2, hemHW * f * 1.02, hemY - 1)}`, shade(c, 1.3), g.lw * 0.8, { opacity: 0.5 });
+        pleats += stroke(ctx, `${M(torsoHW(g, yW) * f, yW + 2)}${Q(hemHW * f * 0.8, (yW + hemY) / 2, hemHW * f * 1.02, hemY - 1)}`, shade(c, 1.4), g.lw * 2.4, { opacity: 0.3 });
       }
       // waist ribbon
       const rib = darken(mix(c, '#ff5f9a', 0.5), 0.02);
-      inside += path(`${M(-torsoHW(g, yW, 3), yW - T * 0.03)}${L(torsoHW(g, yW, 3), yW - T * 0.03)}${L(torsoHW(g, yW, 3), yW + T * 0.04)}${L(-torsoHW(g, yW, 3), yW + T * 0.04)}Z`, { fill: rib });
+      const ribbon = path(`${M(-torsoHW(g, yW, 3), yW - T * 0.03)}${L(torsoHW(g, yW, 3), yW - T * 0.03)}${L(torsoHW(g, yW, 3), yW + T * 0.04)}${L(-torsoHW(g, yW, 3), yW + T * 0.04)}Z`, { fill: rib });
+      const inside = fabricShade(ctx, c, { neckD: neckPath(o), waist: false }) + soft(ctx, pleats) + ribbon;
       out += cel(ctx, d, c, { dx: -g.lw * 2.2, dy: -g.lw * 0.6, inside });
       out += bowSvg(ctx, 0, yW + T * 0.005, Math.max(3.5, g.u * 0.05), lighten(rib, 0.08));
       break;
@@ -271,6 +358,30 @@ export function hoodBackSvg(ctx: Ctx): string {
 
 // ---- sleeves ----------------------------------------------------------------------------------
 
+/** Painted shading of a sleeve: lit left edge, shaded right edge, folds at the elbow of long sleeves. */
+function sleeveShade(ctx: Ctx, side: -1 | 1, c: string, f1: number, elbow: boolean): string {
+  const { g } = ctx;
+  const r = g.armR;
+  const dk = foldColor(c);
+  const lt = lighten(c, 0.14);
+  const P = (f: number, off: number): Pt => armPoint(g, side, f, off);
+  const line = (fa: number, fb: number, off: number): string => `${M(P(fa, off).x, P(fa, off).y)}${L(P(fb, off).x, P(fb, off).y)}`;
+  let dark = stroke(ctx, line(SH_F + 0.03, f1, r * 0.78), dk, r * 0.8, { opacity: 0.38 });
+  // the cap is shaded where the arm leaves the torso (underarm)
+  const ua = P(SH_F + 0.1, side * r * 0.2);
+  dark += ellipse(ua.x, ua.y, r * 0.7, r * 0.55, { fill: dk, opacity: 0.25 });
+  let light = stroke(ctx, line(SH_F, Math.min(f1, 0.4), -r * 0.52), lt, r * 0.42, { opacity: 0.42 });
+  if (elbow) {
+    for (const [f, a] of [[0.5, 0.34], [0.58, 0.24]] as const) {
+      const p0 = P(f, -r * 1.1), p1 = P(f + 0.035, 0), p2 = P(f, r * 1.1);
+      dark += stroke(ctx, `${M(p0.x, p0.y)}${Q(p1.x, p1.y, p2.x, p2.y)}`, dk, r * 0.5, { opacity: a });
+    }
+    const q0 = P(0.54, -r * 0.7), q1 = P(0.64, -r * 0.2);
+    light += stroke(ctx, `${M(q0.x, q0.y)}${L(q1.x, q1.y)}`, lt, r * 0.35, { opacity: 0.3 });
+  }
+  return lightSide(ctx, c) + soft(ctx, dark) + soft(ctx, light);
+}
+
 export function sleevesSvg(ctx: Ctx): string {
   const { g, p } = ctx;
   const c = p.topColor;
@@ -279,26 +390,25 @@ export function sleevesSvg(ctx: Ctx): string {
   for (const side of [-1, 1] as const) {
     switch (p.top) {
       case 'tshirt':
-        out += cel(ctx, armSlice(ctx, side, -0.08, 0.36, 1.5, r * 0.18), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3 });
+        out += cel(ctx, armSlice(ctx, side, SH_F, 0.36, RG, r * 0.14, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.36, false) });
         break;
       case 'sailor': {
-        out += cel(ctx, armSlice(ctx, side, -0.08, 0.36, 1.5, r * 0.18), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3 });
+        out += cel(ctx, armSlice(ctx, side, SH_F, 0.36, RG, r * 0.14, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.36, false) });
         const collar = luminance(c) > 0.62 ? mix(c, '#3a4a8a', 0.72) : lighten(c, 0.5);
-        out += flat(ctx, armSlice(ctx, side, 0.29, 0.36, 1.5, r * 0.18), collar, { lineW: g.lw * 0.8 });
+        out += flat(ctx, armSlice(ctx, side, 0.29, 0.36, RG, r * 0.14), collar, { lineW: g.lw * 0.8 });
         break;
       }
       case 'dress':
-        out += cel(ctx, armSlice(ctx, side, -0.1, 0.27, r * 0.22, r * 0.2), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3 });
-        out += flat(ctx, armSlice(ctx, side, 0.23, 0.28, r * 0.2, r * 0.2), shade(c, 0.8), { lineW: g.lw * 0.8 });
+        out += cel(ctx, armSlice(ctx, side, SH_F, 0.27, RG, r * 0.3, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.27, false) });
+        out += flat(ctx, armSlice(ctx, side, 0.23, 0.28, RG, r * 0.3), shade(c, 0.8), { lineW: g.lw * 0.8 });
         break;
       case 'hoodie':
       case 'sweater': {
-        out += cel(ctx, armSlice(ctx, side, -0.08, 0.93, 1.5, r * 0.28), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3 });
-        out += cel(ctx, armSlice(ctx, side, 0.86, 0.96, 1.5, r * 0.12), shade(c, 0.7), { dx: -g.lw * 0.8, dy: -g.lw * 0.2 });
+        out += cel(ctx, armSlice(ctx, side, SH_F, 0.93, RG, r * 0.2, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.93, true) });
+        out += cel(ctx, armSlice(ctx, side, 0.86, 0.96, RG, r * 0.1), shade(c, 0.7), { dx: -g.lw * 0.8, dy: -g.lw * 0.2 });
         break;
       }
     }
   }
   return out;
 }
-

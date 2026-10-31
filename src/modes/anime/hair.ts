@@ -538,38 +538,88 @@ function bunPath(cx: number, cy: number, r: number): string {
   );
 }
 
-/** Pointed tufts sticking out around the head for the messy short cut (drawn behind the hair mass). */
-function tuftD(P: Pt, nx: number, ny: number, len: number, lean: number, half: number): string {
-  const tx = -ny, ty = nx; // tangent
-  const B1: Pt = { x: P.x - tx * half, y: P.y - ty * half };
-  const B2: Pt = { x: P.x + tx * half, y: P.y + ty * half };
-  const T: Pt = { x: P.x + nx * len + tx * lean * len * 0.5, y: P.y + ny * len + ty * lean * len * 0.5 };
-  return M(B1.x, B1.y) + Q(P.x + nx * len * 0.5 - tx * half * 0.4, P.y + ny * len * 0.5 - ty * half * 0.4, T.x, T.y) + Q(P.x + nx * len * 0.5 + tx * half * 0.6, P.y + ny * len * 0.5 + ty * half * 0.6, B2.x, B2.y) + 'Z';
+/**
+ * Inside of a small hair part drawn in the soft style: darker towards `dark` (where it meets the head or
+ * hides under other hair), the light side, fine strands and the warm rim light. Clipped by the caller.
+ */
+function softInside(ctx: Ctx, d: string, strands: StrandSet, dark: { cx: number; cy: number; r: number; inner: number }, reach: number): string {
+  const id = ctx.uid('hdk');
+  return (
+    `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${dark.cx.toFixed(1)}" cy="${dark.cy.toFixed(1)}" r="${dark.r.toFixed(1)}">` +
+    `<stop offset="${dark.inner.toFixed(2)}" stop-color="${darken(ctx.hairShade, 0.08)}" stop-opacity="0.75"/><stop offset="1" stop-color="${ctx.hairShade}" stop-opacity="0"/></radialGradient>` +
+    `<rect x="${(dark.cx - dark.r).toFixed(1)}" y="${(dark.cy - dark.r).toFixed(1)}" width="${(dark.r * 2).toFixed(1)}" height="${(dark.r * 2).toFixed(1)}" fill="url(#${id})"/>` +
+    strands.svg(ctx) +
+    rimLight(ctx, d, reach, 0.5)
+  );
 }
 
+/** Adds a strand in one of the three hair tones (light, warm rim, dark), picked by `r` in 0..1. */
+function toneStrand(ctx: Ctx, set: StrandSet, d: string, r: number, sw: number): void {
+  if (r > 0.7) set.add(d, ctx.hairLight, sw, 0.45);
+  else if (r > 0.52) set.add(d, ctx.hairRim, sw * 0.8, 0.35);
+  else set.add(d, darken(ctx.hairShade, 0.06), sw, 0.55);
+}
+
+/** One soft lock for the messy cut: a curved sliver from base P along the normal, bending sideways. */
+function messyLock(P: Pt, nx: number, ny: number, len: number, lean: number, half: number): { d: string; axis: [Pt, Pt, Pt] } {
+  const tx = -ny, ty = nx; // tangent
+  const B: Pt = { x: P.x - nx * half * 0.8, y: P.y - ny * half * 0.8 };
+  const E: Pt = { x: P.x + nx * len + tx * lean * len * 0.55, y: P.y + ny * len + ty * lean * len * 0.55 };
+  // the lock curls a little: its middle bows towards the lean side
+  const Cm: Pt = { x: (B.x + E.x) / 2 + tx * lean * len * 0.3 - nx * len * 0.05, y: (B.y + E.y) / 2 + ty * lean * len * 0.3 - ny * len * 0.05 };
+  const w = half;
+  const d =
+    M(B.x - tx * w, B.y - ty * w) +
+    C(Cm.x - tx * w * 0.75, Cm.y - ty * w * 0.75, E.x - tx * w * 0.35 - nx * len * 0.12, E.y - ty * w * 0.35 - ny * len * 0.12, E.x, E.y) +
+    C(E.x + tx * w * 0.15 - nx * len * 0.22, E.y + ty * w * 0.15 - ny * len * 0.22, Cm.x + tx * w * 0.8, Cm.y + ty * w * 0.8, B.x + tx * w, B.y + ty * w) +
+    'Z';
+  return { d, axis: [B, Cm, E] };
+}
+
+/** Tousled locks sticking out around the head for the messy short cut (drawn behind the hair mass). */
 function messyTufts(ctx: Ctx, fills: { fill: string }, opts: { line: string; shadeColor: string; dx: number; dy: number }): string {
   const { g } = ctx;
   const m = metrics(ctx);
   const u = g.u;
-  const ring = skullArc(g, m.rx * 1.06, m.yc, m.vTop - u * 0.02, 0, Math.PI, 10);
-  // [index on the ring, length in head heights, sideways lean]
-  const spec: Array<[number, number, number]> = [[1, 0.16, 0.5], [2, 0.13, 0.3], [3, 0.17, 0.2], [4, 0.12, 0.1], [5, 0.16, -0.1], [6, 0.12, -0.2], [7, 0.17, -0.3], [8, 0.13, -0.4], [9, 0.16, -0.5]];
-  let out = '';
-  const tuft = tuftD;
+  const ring = skullArc(g, m.rx * 1.02, m.yc, m.vTop - u * 0.04, 0, Math.PI, 10);
+  // [index on the ring, length in head heights, how much the tip droops sideways]
+  const spec: Array<[number, number, number]> = [[1, 0.17, 0.95], [2, 0.14, 0.85], [3, 0.15, 0.7], [4, 0.09, 0.6], [5, 0.08, -0.6], [6, 0.09, 0.6], [7, 0.15, 0.7], [8, 0.14, 0.85], [9, 0.17, 0.95]];
+  const locks: Array<{ d: string; axis: [Pt, Pt, Pt]; half: number }> = [];
   for (const [i, len, lean] of spec) {
     const P = ring[i];
-    const nx = P.x / (m.rx * 1.06), ny = (P.y - m.yc) / Math.max(1, m.yc - (g.yTop - u * 0.04));
+    const nx = P.x / (m.rx * 1.02), ny = (P.y - m.yc) / Math.max(1, m.yc - (g.yTop - u * 0.04));
     const l = Math.hypot(nx, ny) || 1;
-    out += cel(ctx, tuft(P, nx / l, ny / l, len * u, lean, u * 0.075), fills.fill, opts);
+    const half = u * 0.1;
+    // the tips droop towards the outside and down (the lean sign follows the side of the head)
+    const droop = Math.abs(P.x) < m.rx * 0.15 ? 1 : Math.sign(nx);
+    locks.push({ ...messyLock(P, nx / l, ny / l, len * u, lean * droop, half), half });
   }
-  // down-pointing tufts beside the cheeks
+  // locks falling beside the cheeks, curling outwards
   for (const sd of [-1, 1] as const) {
-    for (const [dy, len] of [[0.12, 0.2], [0.3, 0.17]] as const) {
-      const P: Pt = { x: sd * m.rx * 1.02, y: m.yc + u * dy };
-      out += cel(ctx, tuft(P, sd * 0.75, 0.66, len * u, sd * -0.3, u * 0.07), fills.fill, opts);
+    for (const [dy, len] of [[0.1, 0.17], [0.28, 0.15]] as const) {
+      const P: Pt = { x: sd * m.rx * 0.98, y: m.yc + u * dy };
+      const half = u * 0.085;
+      locks.push({ ...messyLock(P, sd * 0.7, 0.71, len * u, sd * -0.55, half), half });
     }
   }
-  return out;
+  const d = locks.map((k) => k.d).join('');
+  const set = new StrandSet();
+  const sw = Math.max(0.45, g.lw * 0.6);
+  locks.forEach((k, i) => {
+    const [B, Cm, E] = k.axis;
+    for (let j = 0; j < 3; j++) {
+      const r = hash(i * 7.1 + j * 2.9);
+      const off = (j - 1) * k.half * 0.45;
+      const dx = (Cm.y - B.y), dy = -(Cm.x - B.x);
+      const l = Math.hypot(dx, dy) || 1;
+      const ox = (dx / l) * off, oy = (dy / l) * off;
+      const f = 0.72 + 0.2 * r; // strands stop before the tip at different lengths
+      const end: Pt = { x: lerp(Cm.x, E.x, f) + ox * 0.3, y: lerp(Cm.y, E.y, f) + oy * 0.3 };
+      toneStrand(ctx, set, M(B.x + ox, B.y + oy) + Q(Cm.x + ox, Cm.y + oy, end.x, end.y), hash(i * 3.3 + j * 5.7), sw * (0.8 + 0.6 * r));
+    }
+  });
+  const inside = softInside(ctx, d, set, { cx: 0, cy: m.yc, r: Math.max(m.rx, m.yc - g.yTop) * 1.3, inner: 0.7 }, u * 0.9);
+  return cel(ctx, d, fills.fill, { ...opts, inside });
 }
 
 /**
@@ -605,61 +655,182 @@ function tailFinish(ctx: Ctx, fills: { shade: string }, side: 1 | -1, tie: Pt, e
   return shadeOverlay(ctx, tie.y, endY, fills.shade, 0.5) + set.svg(ctx, true);
 }
 
-/** One drill curl: a stack of tilted, shrinking coils hanging from the tie. */
+/**
+ * One drill curl: a smooth, glossy spiral hanging from the tie. The outline bulges once per turn, the
+ * turns are separated by soft dark grooves, a light band runs down the lit side and fine strands follow
+ * each turn.
+ */
 function drillCurl(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1, tie: Pt, endY: number, opts: { line: string; shadeColor: string; dx: number; dy: number }): string {
   const { g } = ctx;
-  const hw = g.hw, s = side;
+  const hw = g.hw, s = side, u = g.u;
   const len = endY - tie.y;
-  const n = Math.max(5, Math.round(len / (g.u * 0.13)));
-  let out = '';
-  // coils are drawn from the bottom up, so each upper coil overlaps the one below it
-  for (let i = n - 1; i >= 0; i--) {
-    const t = i / (n - 1);
-    const cx = tie.x + s * hw * (0.3 + 0.1 * t) + s * Math.sin(t * Math.PI * 3) * hw * 0.04;
-    const cy = tie.y + g.u * 0.05 + (len - g.u * 0.1) * t;
-    const rx = hw * 0.4 * (1 - 0.55 * t);
-    const ry = Math.max(rx * 0.7, (len / n) * 0.75);
-    out += cel(ctx, blobPath(cx, cy, rx, ry, s * -1.15), fills.fill, {
-      ...opts,
-      inside: stroke(ctx, `${M(cx - rx * 0.5, cy - ry * 0.5)}${Q(cx - rx * 0.1, cy - ry * 0.1, cx - rx * 0.4, cy + ry * 0.4)}`, ctx.hairLight, g.lw * 1.4, { opacity: 0.45 }),
-    });
+  const turns = Math.max(4, Math.round(len / (u * 0.15)));
+  const y0 = tie.y + u * 0.02;
+  const axisX = (t: number): number => tie.x + s * hw * (0.3 + 0.1 * t);
+  const axisY = (t: number): number => y0 + (endY - u * 0.02 - y0) * t;
+  // narrow at the tie, full after the first turn, then tapering to the end
+  const width = (t: number): number => hw * 0.4 * (1 - 0.6 * t) * (0.45 + 0.55 * Math.min(1, Math.sqrt(t * turns)));
+  // the turns are tilted: a groove starts higher on the outer side than on the inner side
+  const tilt = (u * 0.05) * s;
+  const steps = turns * 6;
+  const left: Pt[] = [], right: Pt[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const k = t * turns;
+    const w = width(t);
+    // bulge per turn, offset between the two sides by half a turn (that makes it read as a spiral)
+    const bl = 0.84 + 0.16 * Math.sin(Math.PI * (k % 1));
+    const br = 0.84 + 0.16 * Math.sin(Math.PI * ((k + 0.5) % 1));
+    left.push({ x: axisX(t) - w * bl, y: axisY(t) });
+    right.push({ x: axisX(t) + w * br, y: axisY(t) });
   }
-  return out;
+  const tip: Pt = { x: axisX(1) + s * hw * 0.03, y: endY + u * 0.04 };
+  const top: Pt = { x: axisX(0), y: tie.y - u * 0.02 };
+  const d = smoothClosed([top, ...left, tip, ...right.reverse()]);
+  const set = new StrandSet();
+  const sw = Math.max(0.45, g.lw * 0.6);
+  let grooves = '';
+  let gloss = '';
+  for (let i = 1; i <= turns; i++) {
+    const t = i / turns;
+    const tm = (i - 0.5) / turns;
+    const w = width(Math.min(1, t)) * 1.05;
+    const x = axisX(t), y = axisY(t);
+    // groove: a curve across the drill, lower in the middle (seen from slightly above)
+    const sag = (len / turns) * 0.28;
+    if (i < turns) grooves += M(x - w, y - tilt) + Q(x, y + sag, x + w, y + tilt);
+    // light band on the lit side of every turn
+    const wm = width(tm);
+    const xm = axisX(tm), ym = axisY(tm);
+    gloss += M(xm - wm * 0.55, ym - (len / turns) * 0.3) + Q(xm - wm * 0.25, ym - (len / turns) * 0.05, xm + wm * 0.15, ym + (len / turns) * 0.3);
+    // strands follow the turn
+    for (let j = 0; j < 4; j++) {
+      const r = hash(i * 4.3 + j * 1.7 + (s > 0 ? 50 : 0));
+      const fy = ym + (len / turns) * (-0.35 + 0.22 * j);
+      toneStrand(ctx, set, M(xm - wm * 0.95, fy - tilt * 0.8) + Q(xm, fy + sag * (0.6 + 0.4 * r), xm + wm * (0.6 + 0.35 * r), fy + tilt * 0.8), r, sw * (0.7 + 0.6 * hash(j + i)));
+    }
+  }
+  const inside =
+    shadeOverlay(ctx, tie.y, endY, fills.shade, 0.45) +
+    group(stroke(ctx, grooves, darken(ctx.hairShade, 0.12), u * 0.05, { opacity: 0.7 }), { filter: `url(#${ctx.soft})` }) +
+    stroke(ctx, grooves, darken(ctx.hairShade, 0.15), Math.max(0.5, g.lw * 0.7), { opacity: 0.45 }) +
+    group(stroke(ctx, gloss, ctx.hairLight, u * 0.035, { opacity: 0.75 }), { filter: `url(#${ctx.soft})` }) +
+    lightSide(ctx) +
+    set.svg(ctx, true) +
+    rimLight(ctx, d, len, 0.6);
+  return cel(ctx, d, fills.fill, { ...opts, inside });
 }
 
-/** A single braid hanging over the shoulder: overlapping links, a tuft and a tie. */
-function braidSvg(ctx: Ctx, fills: { fill: string }, side: 1 | -1): string {
+/**
+ * A single braid hanging over the shoulder, in the soft style: the links form one shape, separated by soft
+ * dark grooves, with strands following every link, a sheen on the lit side and rim light. Ends in a tuft
+ * and a tie.
+ */
+function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1): string {
   const { g, p } = ctx;
-  const hw = g.hw, s = side;
+  const hw = g.hw, s = side, u = g.u;
   const endY = hairEnd(ctx);
-  const y0 = g.yTop + g.u * 0.52;
+  const y0 = g.yTop + u * 0.52;
   const x0 = s * hw * 0.84;
   const x1 = s * hw * 0.9;
   const len = endY - y0;
-  const n = Math.max(5, Math.round(len / (g.u * 0.12)));
+  const n = Math.max(5, Math.round(len / (u * 0.12)));
   const opts = { line: ctx.hairLine, shadeColor: ctx.hairShade, dx: -g.lw * 1.4, dy: -g.lw * 0.9 };
-  let out = '';
+  let d = '';
+  let grooves = '';
+  let gloss = '';
+  const set = new StrandSet();
+  const sw = Math.max(0.45, g.lw * 0.55);
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1);
     const cx = lerp(x0, x1, t) + Math.sin(t * Math.PI * 2) * hw * 0.05 * s;
-    const cy = y0 + (len - g.u * 0.1) * t;
+    const cy = y0 + (len - u * 0.1) * t;
     const rx = hw * 0.22 * (1 - 0.4 * t);
     const ry = (len / n) * 0.78;
-    const rot = (i % 2 === 0 ? 1 : -1) * 0.5;
-    out += cel(ctx, blobPath(cx, cy, rx, ry, rot), fills.fill, {
-      ...opts,
-      inside: stroke(ctx, `${M(cx - rx * 0.2, cy - ry * 0.7)}${Q(cx + rx * 0.6, cy, cx - rx * 0.1, cy + ry * 0.6)}`, ctx.hairLight, g.lw * 1.2, { opacity: 0.4 }),
-    });
+    const flip = i % 2 === 0 ? 1 : -1;
+    d += blobPath(cx, cy, rx, ry, flip * 0.5);
+    // local frame of the link: x across (mirrored on every other link), y down
+    const P = (lx: number, ly: number): Pt => ({ x: cx + flip * lx * rx, y: cy + ly * ry });
+    const ptxt = (q: Pt): string => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`;
+    // groove along the upper edge, where the link comes out from under the one above
+    if (i > 0) {
+      const a = P(-1.0, 0.05), b = P(-0.15, -1.15), c = P(0.95, -0.7);
+      grooves += `M${ptxt(a)}Q${ptxt(b)} ${ptxt(c)}`;
+    }
+    for (let j = 0; j < 4; j++) {
+      const k = j / 3 - 0.5;
+      const r = hash(i * 6.1 + j * 2.3);
+      const a = P(-0.9, -0.55 + 0.6 * k), b = P(0.05, -0.25 + 0.7 * k), c = P(0.85, 0.5 + 0.5 * k);
+      toneStrand(ctx, set, `M${ptxt(a)}Q${ptxt(b)} ${ptxt(c)}`, r, sw * (0.7 + 0.6 * hash(i + j * 3)));
+    }
+    const a = P(-0.55, -0.35), b = P(-0.1, -0.15), c = P(0.25, 0.3);
+    gloss += `M${ptxt(a)}Q${ptxt(b)} ${ptxt(c)}`;
   }
   // tuft below the last link
   const tx = lerp(x0, x1, 1);
-  const ty = y0 + (len - g.u * 0.1);
+  const ty = y0 + (len - u * 0.1);
   const w = hw * 0.15;
-  const tuft = M(tx - w, ty) + Q(tx - w * 1.2, ty + g.u * 0.1, tx - w * 0.2, ty + g.u * 0.2) + Q(tx + w * 0.1, ty + g.u * 0.1, tx + w * 0.55, ty + g.u * 0.17) + Q(tx + w * 1.3, ty + g.u * 0.06, tx + w, ty) + 'Z';
-  out += cel(ctx, tuft, fills.fill, opts);
+  const tuft = M(tx - w, ty) + Q(tx - w * 1.2, ty + u * 0.1, tx - w * 0.2, ty + u * 0.2) + Q(tx + w * 0.1, ty + u * 0.1, tx + w * 0.55, ty + u * 0.17) + Q(tx + w * 1.3, ty + u * 0.06, tx + w, ty) + 'Z';
+  for (let j = 0; j < 6; j++) {
+    const f = j / 5;
+    const r = hash(j * 9.7 + 4);
+    const bx = tx + w * lerp(-0.8, 0.8, f);
+    toneStrand(ctx, set, M(bx, ty - u * 0.01) + Q(bx + w * (f - 0.5) * 0.4, ty + u * 0.08, tx + w * lerp(-0.4, 0.6, f), ty + u * (0.12 + 0.05 * r)), r, sw);
+  }
+  const all = d + tuft;
+  const fade = endFade(ctx, ty + u * 0.2, u * 0.12, '#b0b0b0');
+  const inside =
+    shadeOverlay(ctx, y0, ty + u * 0.2, fills.shade, 0.45) +
+    group(stroke(ctx, grooves, darken(ctx.hairShade, 0.12), u * 0.045, { opacity: 0.75 }), { filter: `url(#${ctx.soft})` }) +
+    stroke(ctx, grooves, darken(ctx.hairShade, 0.15), Math.max(0.5, g.lw * 0.7), { opacity: 0.4 }) +
+    group(stroke(ctx, gloss, ctx.hairLight, u * 0.03, { opacity: 0.6 }), { filter: `url(#${ctx.soft})` }) +
+    lightSide(ctx) +
+    set.svg(ctx, true) +
+    rimLight(ctx, all, len, 0.5);
+  let out = fade.defs + group(cel(ctx, all, fills.fill, { ...opts, inside }), fade.attrs);
   const tieColor = p.headAcc !== 'none' ? p.headAccColor : '#ff8fb1';
-  out += ellipse(tx, ty - g.u * 0.01, w * 1.35, g.u * 0.032, { fill: tieColor, stroke: mix(tieColor, '#5a2040', 0.45), 'stroke-width': g.lw * 0.8 });
+  out += ellipse(tx, ty - u * 0.01, w * 1.35, u * 0.032, { fill: tieColor, stroke: mix(tieColor, '#5a2040', 0.45), 'stroke-width': g.lw * 0.8 });
   return out;
+}
+
+/** Both buns in the soft style: hair wound around the centre, darker underneath, a sheen and rim light. */
+function bunsSvg(ctx: Ctx, fills: { fill: string; shade: string }, opts: { line: string; shadeColor: string; dx: number; dy: number }, tie: (x: number, y: number, rx: number, ry: number, rot: number) => string): string {
+  const { g } = ctx;
+  const hw = g.hw, u = g.u;
+  const r = hw * 0.31;
+  const cy = g.yTop - u * 0.01;
+  let d = '';
+  let ties = '';
+  let sheen = '';
+  const set = new StrandSet();
+  const sw = Math.max(0.45, g.lw * 0.6);
+  for (const s of [-1, 1] as const) {
+    const cx = s * hw * 0.68;
+    const by = cy - r * 0.2;
+    d += bunPath(cx, by, r);
+    // strands wound around the bun: arcs around a centre a little above the middle
+    const wx = cx + r * 0.05, wy = by - r * 0.25;
+    for (let j = 0; j < 9; j++) {
+      const q = hash(j * 3.7 + s * 11);
+      const rr = r * (0.3 + 0.08 * j) ;
+      const a0 = Math.PI * (0.85 + 0.3 * q), a1 = a0 + Math.PI * (0.9 + 0.5 * hash(j * 1.3 + s));
+      const P0: Pt = { x: wx + Math.cos(a0) * rr, y: wy + Math.sin(a0) * rr * 0.8 };
+      const am = (a0 + a1) / 2;
+      const P2: Pt = { x: wx + Math.cos(a1) * rr, y: wy + Math.sin(a1) * rr * 0.8 };
+      const k = 1 / Math.cos((a1 - a0) / 2);
+      const P1: Pt = { x: wx + Math.cos(am) * rr * k, y: wy + Math.sin(am) * rr * 0.8 * k };
+      toneStrand(ctx, set, M(P0.x, P0.y) + Q(P1.x, P1.y, P2.x, P2.y), hash(j * 5.1 + s * 3), sw * (0.7 + 0.6 * q));
+    }
+    sheen += M(cx - r * 0.62, by - r * 0.35) + Q(cx - r * 0.2, by - r * 1.05, cx + r * 0.45, by - r * 0.65);
+    ties += tie(cx - s * r * 0.1, cy + r * 0.55, r * 0.9, u * 0.032, 0);
+  }
+  const inside =
+    shadeOverlay(ctx, cy - r * 0.9, cy + r * 0.6, fills.shade, 0.6) +
+    group(stroke(ctx, sheen, ctx.hairLight, u * 0.04, { opacity: 0.65 }), { filter: `url(#${ctx.soft})` }) +
+    lightSide(ctx) +
+    set.svg(ctx, true) +
+    rimLight(ctx, d, r * 2);
+  return cel(ctx, d, fills.fill, { ...opts, inside }) + ties;
 }
 
 /** One hanging tail: loose hairs behind, the shaded shape with strands and rim light, fading at the ends. */
@@ -719,16 +890,7 @@ export function hairBackSvg(ctx: Ctx): string {
       out += tie(t.x + s * hw * 0.02, t.y + g.u * 0.01, hw * 0.17, g.u * 0.04, s * 25);
     }
   } else if (p.hairBack === 'buns') {
-    const r = hw * 0.31;
-    for (const s of [-1, 1] as const) {
-      const cx = s * hw * 0.68;
-      const cy = g.yTop - g.u * 0.01;
-      out += cel(ctx, bunPath(cx, cy - r * 0.2, r), fills.fill, {
-        ...opts,
-        inside: stroke(ctx, `${M(cx - r * 0.5, cy - r * 0.5)}${Q(cx, cy - r * 1.25, cx + r * 0.6, cy - r * 0.35)}`, lighten(p.hairColor, 0.18), g.lw * 1.6, { opacity: 0.5 }),
-      });
-      out += tie(cx - s * r * 0.1, cy + r * 0.55, r * 0.9, g.u * 0.032, 0);
-    }
+    out += bunsSvg(ctx, fills, opts, tie);
   }
 
   const bm = backMass(ctx);
@@ -1059,13 +1221,13 @@ function fineStrands(ctx: Ctx, tips: Pt[], crownX: number, m: HairMetrics, lockX
  * Warm back light along an outer edge of the hair: a wide blurred stroke, strongest on the upper left
  * (where the light comes from). Clipped to the hair shape by the caller.
  */
-function rimLight(ctx: Ctx, d: string, reach = ctx.g.u): string {
+function rimLight(ctx: Ctx, d: string, reach = ctx.g.u, strength = 1): string {
   const { g } = ctx;
   const id = ctx.uid('rim');
   return (
     `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${(-g.hw * 1.3).toFixed(1)}" y1="${g.yTop.toFixed(1)}" x2="${(g.hw * 1.3).toFixed(1)}" y2="${(g.yTop + Math.max(g.u, reach * 0.6)).toFixed(1)}">` +
     `<stop offset="0" stop-color="${ctx.hairRim}" stop-opacity="0.9"/><stop offset="1" stop-color="${ctx.hairRim}" stop-opacity="0.25"/></linearGradient>` +
-    path(d, { fill: 'none', stroke: `url(#${id})`, 'stroke-width': (g.u * 0.06).toFixed(2), filter: `url(#${ctx.soft})` })
+    path(d, { fill: 'none', stroke: `url(#${id})`, 'stroke-width': (g.u * 0.06).toFixed(2), filter: `url(#${ctx.soft})`, opacity: strength < 1 ? strength : undefined })
   );
 }
 

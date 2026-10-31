@@ -207,4 +207,6 @@ export const en: Dictionary = {
   'a.bgPattern.stars': 'Stars',
   'a.bgPattern.gradient': 'Gradient',
   'a.bgPattern.bokeh': 'Lights',
+  'a.bgPattern.sunset': 'Sunset',
+  'a.bgPattern.window': 'Window light',
 };

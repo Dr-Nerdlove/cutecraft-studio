@@ -1,7 +1,7 @@
 import { darken, lighten, mix, outline, shade } from '../../core/color';
-import { C, L, M, Q, lerp, smoothClosed, type Pt, ellipse, group, path } from '../../core/svg';
+import { C, L, M, Q, lerp, smoothClosed, smoothOpen, type Pt, ellipse, group, path } from '../../core/svg';
 import { cel, stroke, type Ctx } from './context';
-import { armGeo, torsoLeftEdge, type Geo } from './geometry';
+import { armGeo, torsoHW, type Geo } from './geometry';
 
 // ---- legs -------------------------------------------------------------------------------------
 
@@ -100,16 +100,110 @@ export function shoesSvg(ctx: Ctx): string {
 
 // ---- torso & neck -----------------------------------------------------------------------------
 
-export function torsoPath(g: Geo, y0: number, y1: number, grow = 0, steps = 12): string {
-  const left = torsoLeftEdge(g, y0, y1, grow, steps);
-  const right = left.map((q) => ({ x: -q.x, y: q.y })).reverse();
-  return smoothClosed([...left, ...right], 1 / 6);
+// ---- shoulder line ----------------------------------------------------------------------------
+
+/** Where on the arm axis (fraction of its length) the rounded shoulder cap is centred. */
+export const SH_F = 0.03;
+
+type Cubic = [Pt, Pt, Pt, Pt];
+
+/** Right part of a cubic Bezier from parameter t on (de Casteljau). */
+function cubicFrom(b: Cubic, t: number): Cubic {
+  const m = (p: Pt, q: Pt): Pt => ({ x: lerp(p.x, q.x, t), y: lerp(p.y, q.y, t) });
+  const ab = m(b[0], b[1]), bc = m(b[1], b[2]), cd = m(b[2], b[3]);
+  const abc = m(ab, bc), bcd = m(bc, cd);
+  return [m(abc, bcd), bcd, cd, b[3]];
+}
+
+export interface Shoulder {
+  /** Neck base -> tangent point on the shoulder cap (a slightly concave trapezius slope). */
+  b: Cubic;
+  /** Centre and radius of the rounded shoulder cap (the top of the arm). */
+  ctr: Pt;
+  R: number;
+}
+
+/**
+ * Shoulder line of one side: a gentle slope from the neck base that runs into the rounded top of the
+ * arm tangentially, so nothing sticks up above it. `rg` grows the cap (garments), `grow` moves the
+ * neck base outwards, `tN` (0..1) starts the line further out (wider necklines).
+ */
+export function shoulderGeo(g: Geo, side: -1 | 1, rg: number, grow: number, tN = 0): Shoulder {
+  const a = armGeo(g, 1);
+  const ctr = { x: a.x0 + (a.x1 - a.x0) * SH_F, y: a.y0 + (a.y1 - a.y0) * SH_F };
+  const R = a.r + rg;
+  const n = { x: g.neckHW * 1.3 + grow, y: g.yShoulder };
+  const dx = ctr.x - n.x, dy = ctr.y - n.y;
+  const d = Math.hypot(dx, dy);
+  const ang = Math.atan2(dy, dx) - Math.asin(Math.min(0.9, R / d));
+  const tl = Math.sqrt(d * d - R * R);
+  const t = { x: n.x + tl * Math.cos(ang), y: n.y + tl * Math.sin(ang) };
+  const c1a = ang + 0.2; // steeper at the neck, then flattening into the shoulder
+  const c1 = { x: n.x + Math.cos(c1a) * tl * 0.35, y: n.y + Math.sin(c1a) * tl * 0.35 };
+  const c2 = { x: t.x - Math.cos(ang) * tl * 0.3, y: t.y - Math.sin(ang) * tl * 0.3 };
+  let b: Cubic = [n, c1, c2, t];
+  if (tN > 0) b = cubicFrom(b, tN);
+  const mx = (p: Pt): Pt => ({ x: p.x * side, y: p.y });
+  return { b: b.map(mx) as Cubic, ctr: mx(ctr), R };
+}
+
+/** Point on the shoulder line at parameter t (0 = start, 1 = shoulder cap). */
+export function shoulderAt(s: Shoulder, t: number): Pt {
+  const [p0, p1, p2, p3] = s.b;
+  const u = 1 - t;
+  const k = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
+  return { x: p0.x * k[0] + p1.x * k[1] + p2.x * k[2] + p3.x * k[3], y: p0.y * k[0] + p1.y * k[1] + p2.y * k[2] + p3.y * k[3] };
+}
+
+function edgePts(g: Geo, s: Shoulder, grow: number, yEnd: number, tail: Pt[], steps: number): Pt[] {
+  const yA = s.ctr.y + s.R * 1.05;
+  const pts: Pt[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const y = lerp(yA, yEnd, i / steps);
+    pts.push({ x: -torsoHW(g, y, grow), y });
+  }
+  return [...pts, ...tail];
+}
+
+/**
+ * Left edge of a garment or the torso, going down from the left end of the shoulder line (start the
+ * path at `shoulderGeo(g, -1, rg, grow, tN).b[0]`): shoulder line, then (hidden under the arm cap)
+ * the side. `tail` = extra left-edge points after the torso part (skirts).
+ */
+export function edgeDown(g: Geo, rg: number, grow: number, tN: number, yEnd: number, tail: Pt[] = [], steps = 10): string {
+  const s = shoulderGeo(g, -1, rg, grow, tN);
+  const [, c1, c2, t] = s.b;
+  const pts = edgePts(g, s, grow, yEnd, tail, steps);
+  return C(c1.x, c1.y, c2.x, c2.y, t.x, t.y) + L(s.ctr.x, s.ctr.y) + L(pts[0].x, pts[0].y) + smoothOpen(pts, 1 / 6, false);
+}
+
+/** Right edge going up from the bottom of the left-edge points (mirror of `edgeDown`). */
+export function edgeUp(g: Geo, rg: number, grow: number, tN: number, yEnd: number, tail: Pt[] = [], steps = 10): string {
+  const s = shoulderGeo(g, -1, rg, grow, tN);
+  const [n, c1, c2, t] = s.b;
+  const pts = edgePts(g, s, grow, yEnd, tail, steps).map((q) => ({ x: -q.x, y: q.y })).reverse();
+  return smoothOpen(pts, 1 / 6, false) + L(-s.ctr.x, s.ctr.y) + L(-t.x, t.y) + C(-c2.x, c2.y, -c1.x, c1.y, -n.x, n.y);
+}
+
+/** Closed torso (skin) outline with the sloping shoulders. */
+function torsoShape(g: Geo, y1: number): string {
+  const n = shoulderGeo(g, -1, 0, 0).b[0];
+  return M(n.x, n.y) + edgeDown(g, 0, 0, 0, y1) + L(torsoHW(g, y1), y1) + edgeUp(g, 0, 0, 0, y1) + 'Z';
 }
 
 export function torsoSvg(ctx: Ctx): string {
   const { g } = ctx;
-  return cel(ctx, torsoPath(g, g.yShoulder - 1, g.yCrotch + 1), ctx.skin, {
-    line: ctx.skinLine, shadeColor: ctx.skinShade, dx: -g.lw * 1.5, dy: -g.lw * 0.5,
+  const yS = g.yShoulder, T = g.torsoLen;
+  // collarbones: two very soft strokes, only seen where the neckline is open
+  const dark = mix(ctx.skinShade, '#a05a60', 0.3);
+  let bones = '';
+  for (const s of [-1, 1] as const) {
+    bones += stroke(ctx, `${M(s * g.neckHW * 0.75, yS + T * 0.022)}${Q(s * g.neckHW * 2.2, yS + T * 0.03, s * g.neckHW * 3.9, yS + T * 0.004)}`, dark, g.lw * 2.2, { opacity: 0.5 });
+  }
+  const hollow = ellipse(0, yS + T * 0.012, g.neckHW * 0.55, g.u * 0.02, { fill: dark, opacity: 0.4 });
+  const inside = group(bones + hollow, { filter: `url(#${ctx.soft})` });
+  return cel(ctx, torsoShape(g, g.yCrotch + 1), ctx.skin, {
+    line: ctx.skinLine, shadeColor: ctx.skinShade, dx: -g.lw * 1.5, dy: -g.lw * 0.5, inside,
   });
 }
 
@@ -129,9 +223,10 @@ export function neckSvg(ctx: Ctx): string {
 
 /**
  * Outline of a slice of an arm from fraction f0 to f1 of the shoulder-to-wrist length.
- * `hand` adds the hand at the end (only meaningful for f1 = 1).
+ * `hand` adds the hand at the end (only meaningful for f1 = 1). `cap` rounds the top end into a
+ * semicircle (the shoulder cap) instead of cutting it off straight.
  */
-export function armSlice(ctx: Ctx, side: -1 | 1, f0: number, f1: number, grow = 0, flare = 0, hand = false): string {
+export function armSlice(ctx: Ctx, side: -1 | 1, f0: number, f1: number, grow = 0, flare = 0, hand = false, cap = false): string {
   const g = ctx.g;
   const a = armGeo(g, side);
   const dx = a.x1 - a.x0, dy = a.y1 - a.y0;
@@ -165,7 +260,24 @@ export function armSlice(ctx: Ctx, side: -1 | 1, f0: number, f1: number, grow = 
   }
   // the order must run around the shape: left side down, tail, right side up
   const pts = side === -1 ? [...leftPts, ...tail, ...rightPts.slice().reverse()] : [...rightPts, ...tail, ...leftPts.slice().reverse()];
+  if (cap) {
+    // arc over the top from one side point to the other (a = 0: leftPts[0], a = PI: rightPts[0])
+    const c0 = posAt(f0), w0 = widthAt(f0) + grow;
+    const arc = [30, 60, 90, 120, 150].map((deg) => {
+      const a2 = (deg * Math.PI) / 180;
+      return { x: c0.x + w0 * (-nrm.x * Math.cos(a2) - dir.x * Math.sin(a2)), y: c0.y + w0 * (-nrm.y * Math.cos(a2) - dir.y * Math.sin(a2)) };
+    });
+    pts.push(...(side === -1 ? arc.reverse() : arc));
+  }
   return smoothClosed(pts, 1 / 6);
+}
+
+/** A point beside the arm axis: fraction f of the way down, `off` to the viewer's right (+) or left (-). */
+export function armPoint(g: Geo, side: -1 | 1, f: number, off = 0): Pt {
+  const a = armGeo(g, side);
+  const dx = a.x1 - a.x0, dy = a.y1 - a.y0;
+  const len = Math.hypot(dx, dy);
+  return { x: a.x0 + dx * f + (dy / len) * off, y: a.y0 + dy * f - (dx / len) * off };
 }
 
 export function armsSvg(ctx: Ctx): string {
@@ -173,7 +285,7 @@ export function armsSvg(ctx: Ctx): string {
   let out = '';
   for (const side of [-1, 1] as const) {
     const a = armGeo(g, side);
-    out += cel(ctx, armSlice(ctx, side, -0.04, 1, 0, 0, true), ctx.skin, {
+    out += cel(ctx, armSlice(ctx, side, SH_F, 1, 0, 0, true, true), ctx.skin, {
       line: ctx.skinLine, shadeColor: ctx.skinShade, dx: -g.lw * 1.3, dy: -g.lw * 0.3,
     });
     // tiny thumb line on the hand

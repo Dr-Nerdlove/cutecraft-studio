@@ -206,4 +206,6 @@ export const de = {
   'a.bgPattern.stars': 'Sterne',
   'a.bgPattern.gradient': 'Verlauf',
   'a.bgPattern.bokeh': 'Lichter',
+  'a.bgPattern.sunset': 'Sonnenuntergang',
+  'a.bgPattern.window': 'Fensterlicht',
 } as const;

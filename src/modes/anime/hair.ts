@@ -730,7 +730,7 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
   const { g, p } = ctx;
   const hw = g.hw, s = side, u = g.u;
   const endY = hairEnd(ctx);
-  const y0 = g.yTop + u * 1.0;
+  const y0 = g.yTop + u * 0.56;
   const x0 = s * hw * 0.84;
   const x1 = s * hw * 0.9;
   const len = endY - y0;
@@ -745,10 +745,8 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
     const t = i / (n - 1);
     const cx = lerp(x0, x1, t) + Math.sin(t * Math.PI * 2) * hw * 0.05 * s;
     const cy = y0 + (len - u * 0.1) * t;
-    // the braid starts thin where the three strands are first crossed and gets full width after a few links
-    const ramp = Math.min(1, 0.4 + 0.2 * i);
-    const rx = hw * 0.22 * (1 - 0.4 * t) * ramp;
-    const ry = (len / n) * 0.78 * (0.75 + 0.25 * ramp);
+    const rx = hw * 0.22 * (1 - 0.4 * t);
+    const ry = (len / n) * 0.78;
     const flip = i % 2 === 0 ? 1 : -1;
     d += blobPath(cx, cy, rx, ry, flip * 0.5);
     // local frame of the link: x across (mirrored on every other link), y down
@@ -789,7 +787,7 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
     lightSide(ctx) +
     set.svg(ctx, true) +
     rimLight(ctx, all, len, 0.5);
-  let out = braidRoot(ctx, fills, side, { x: x0, y: y0 - (len / n) * 0.45 }, hw * 0.22 * 0.55, opts);
+  let out = braidRoot(ctx, fills, side, { x: x0, y: y0 - (len / n) * 0.45 }, hw * 0.22, opts);
   out += fade.defs + group(cel(ctx, all, fills.fill, { ...opts, inside }), fade.attrs);
   const tieColor = p.headAcc !== 'none' ? p.headAccColor : '#ff8fb1';
   out += ellipse(tx, ty - u * 0.01, w * 1.35, u * 0.032, { fill: tieColor, stroke: mix(tieColor, '#5a2040', 0.45), 'stroke-width': g.lw * 0.8 });
@@ -797,20 +795,20 @@ function braidSvg(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1
 }
 
 /**
- * Where the braid begins: three separate strands of hair come out from under the side hair and run
- * together into the thin first link, the inner and outer strand crossing over each other (the start of
- * the plait). Each strand is wide at the head and narrows towards the braid.
+ * Where the braid begins: three strands of hair, each a third of the braid's width, come out from under
+ * the side hair and after a short run (about ear height) go into the first link, the inner and outer
+ * strand crossing over each other (the start of the plait).
  */
 function braidRoot(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -1, start: Pt, w: number, opts: { line: string; shadeColor: string; dx: number; dy: number }): string {
   const { g } = ctx;
   const u = g.u, s = side;
   const m = metrics(ctx);
   // the strands start under the side hair (which hides their upper ends) and come out below it
-  // beside the face, never over it
-  const ty = g.yTop + u * 0.44;
+  // a short run from under the side hair to about ear height; beside the face, never over it
+  const ty = g.yTop + u * 0.3;
   const fw = faceHalfWidthAt(g, ctx.p.faceShape, ty);
-  const A: Pt = { x: s * fw * 0.97, y: ty };
-  const B: Pt = { x: s * Math.min(m.rx * 0.9, fw + g.hw * 0.08), y: ty + u * 0.03 };
+  const A: Pt = { x: s * Math.max(fw * 0.97, Math.abs(start.x) - w * 0.9), y: ty };
+  const B: Pt = { x: s * Math.min(m.rx * 0.9, Math.abs(start.x) + w * 0.9), y: ty + u * 0.04 };
   const sw = Math.max(0.45, g.lw * 0.55);
   // [position on the head from A (inner) to B (outer), end offset across the braid start (+ = outer)]
   const spec: Array<[number, number]> = [[0.95, -0.55], [0.1, 0.6], [0.5, 0.0]];
@@ -818,13 +816,13 @@ function braidRoot(ctx: Ctx, fills: { fill: string; shade: string }, side: 1 | -
   spec.forEach(([f, e], k) => {
     const T: Pt = { x: lerp(A.x, B.x, f), y: lerp(A.y, B.y, f) };
     const E: Pt = { x: start.x + s * e * w, y: start.y + u * 0.03 };
-    // the strands stay apart for a while and only run together just above the first link
-    const Cc: Pt = { x: lerp(T.x, E.x, 0.2), y: lerp(T.y, E.y, 0.78) };
+    const Cc: Pt = { x: lerp(T.x, E.x, 0.35), y: lerp(T.y, E.y, 0.6) };
     const at = (t: number): Pt => ({
       x: (1 - t) * (1 - t) * T.x + 2 * (1 - t) * t * Cc.x + t * t * E.x,
       y: (1 - t) * (1 - t) * T.y + 2 * (1 - t) * t * Cc.y + t * t * E.y,
     });
-    const halfW = (t: number): number => lerp(u * 0.04, w * 0.45, Math.pow(t, 0.8));
+    // each strand is a third of the braid, so together they are as wide as the braid
+    const halfW = (t: number): number => w * lerp(0.36, 0.42, t);
     const l: Pt[] = [], rr: Pt[] = [];
     const N = 8;
     for (let i = 0; i <= N; i++) {

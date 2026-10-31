@@ -17,8 +17,9 @@ export interface AnimeParams {
   eyeSize: number; eyeSpacing: number; eyeY: number; iris: string; hetero: boolean; iris2: string;
   shine: 'classic' | 'star' | 'heart';
   lashes: 'none' | 'light' | 'full';
-  hairBack: 'short' | 'bob' | 'long' | 'wavy' | 'ponytail' | 'twintails' | 'buns';
-  hairFront: 'straight' | 'side' | 'parted' | 'curtain';
+  hairBack: 'short' | 'bob' | 'long' | 'wavy' | 'ponytail' | 'twintails' | 'buns'
+    | 'sidetail' | 'braid' | 'hime' | 'messy' | 'drills';
+  hairFront: 'straight' | 'side' | 'parted' | 'curtain' | 'blunt' | 'swept' | 'spiky' | 'forehead';
   hairColor: string; hairTip: string; tipStrength: number; hairLength: number; ahoge: boolean;
   top: 'tshirt' | 'hoodie' | 'sailor' | 'sweater' | 'dress';
   topColor: string;
@@ -33,7 +34,7 @@ export interface AnimeParams {
   bgPattern: 'plain' | 'dots' | 'hearts' | 'stars' | 'gradient';
 }
 
-const longHair = (p: Params): boolean => ['long', 'wavy', 'ponytail', 'twintails'].includes(p.hairBack as string);
+const longHair = (p: Params): boolean => ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid', 'hime', 'drills'].includes(p.hairBack as string);
 
 export const animeCategories: readonly Category[] = [
   {
@@ -107,11 +108,15 @@ export const animeCategories: readonly Category[] = [
         { value: 'short', labelKey: 'a.hairBack.short' }, { value: 'bob', labelKey: 'a.hairBack.bob' },
         { value: 'long', labelKey: 'a.hairBack.long' }, { value: 'wavy', labelKey: 'a.hairBack.wavy' },
         { value: 'ponytail', labelKey: 'a.hairBack.ponytail' }, { value: 'twintails', labelKey: 'a.hairBack.twintails' },
-        { value: 'buns', labelKey: 'a.hairBack.buns' },
+        { value: 'buns', labelKey: 'a.hairBack.buns' }, { value: 'sidetail', labelKey: 'a.hairBack.sidetail' },
+        { value: 'braid', labelKey: 'a.hairBack.braid' }, { value: 'hime', labelKey: 'a.hairBack.hime' },
+        { value: 'messy', labelKey: 'a.hairBack.messy' }, { value: 'drills', labelKey: 'a.hairBack.drills' },
       ], 'long'),
       choice('hairFront', 'a.hairFront', [
         { value: 'straight', labelKey: 'a.hairFront.straight' }, { value: 'side', labelKey: 'a.hairFront.side' },
         { value: 'parted', labelKey: 'a.hairFront.parted' }, { value: 'curtain', labelKey: 'a.hairFront.curtain' },
+        { value: 'blunt', labelKey: 'a.hairFront.blunt' }, { value: 'swept', labelKey: 'a.hairFront.swept' },
+        { value: 'spiky', labelKey: 'a.hairFront.spiky' }, { value: 'forehead', labelKey: 'a.hairFront.forehead' },
       ], 'straight'),
       color('hairColor', 'a.hairColor', HAIR_COLORS, '#a1604a'),
       color('hairTip', 'a.hairTip', HAIR_COLORS, '#f6a6c9'),

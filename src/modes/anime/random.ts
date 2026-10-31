@@ -51,7 +51,7 @@ export function randomAnime(): AnimeParams {
   const pastelHair = hc.s > 0.5 && hc.l > 0.6;
   const browColor = pastelHair ? '#8a6a8e' : darkHair ? pick(['#2b2230', '#3a2a2a']) : hc.l > 0.6 ? '#a0785a' : '#5a3f3a';
 
-  const hairBack = weighted([['short', 1], ['bob', 1.2], ['long', 1.6], ['wavy', 1.3], ['ponytail', 1], ['twintails', 1.2], ['buns', 0.9]] as const);
+  const hairBack = weighted([['short', 1], ['bob', 1.2], ['long', 1.6], ['wavy', 1.3], ['ponytail', 1], ['twintails', 1.2], ['buns', 0.9], ['sidetail', 0.9], ['braid', 0.9], ['hime', 0.9], ['messy', 0.7], ['drills', 0.6]] as const);
   const top = weighted([['tshirt', 1], ['hoodie', 1], ['sailor', 1.2], ['sweater', 1], ['dress', 1.4]] as const);
 
   return {
@@ -82,7 +82,7 @@ export function randomAnime(): AnimeParams {
     shine: weighted([['classic', 4], ['star', 1.3], ['heart', 1]] as const),
     lashes: weighted([['none', 0.6], ['light', 2], ['full', 2]] as const),
     hairBack,
-    hairFront: pick(['straight', 'side', 'parted', 'curtain'] as const),
+    hairFront: pick(['straight', 'side', 'parted', 'curtain', 'blunt', 'swept', 'spiky', 'forehead'] as const),
     hairColor: hair,
     hairTip: nearHue(HAIR_COLORS.slice(9), baseHue + pick([0, 40, -40, 180])),
     tipStrength: chance(0.45) ? rnd(30, 80) : 0,

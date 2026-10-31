@@ -18,7 +18,7 @@ export interface AnimeParams {
   shine: 'classic' | 'star' | 'heart';
   lashes: 'none' | 'light' | 'full';
   hairBack: 'short' | 'bob' | 'long' | 'wavy' | 'ponytail' | 'twintails' | 'buns'
-    | 'sidetail' | 'braid' | 'hime' | 'messy' | 'drills';
+    | 'sidetail' | 'braid' | 'hime' | 'messy' | 'drills' | 'curls' | 'afro' | 'dreads' | 'pixie';
   hairFront: 'straight' | 'side' | 'parted' | 'curtain' | 'blunt' | 'swept' | 'spiky' | 'forehead';
   hairColor: string; hairTip: string; tipStrength: number; hairLength: number; ahoge: boolean;
   top: 'tshirt' | 'hoodie' | 'sailor' | 'sweater' | 'dress';
@@ -34,7 +34,7 @@ export interface AnimeParams {
   bgPattern: 'plain' | 'dots' | 'hearts' | 'stars' | 'gradient' | 'bokeh' | 'sunset' | 'window';
 }
 
-const longHair = (p: Params): boolean => ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid', 'hime', 'drills'].includes(p.hairBack as string);
+const longHair = (p: Params): boolean => ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid', 'hime', 'drills', 'curls', 'afro', 'dreads'].includes(p.hairBack as string);
 
 export const animeCategories: readonly Category[] = [
   {
@@ -111,13 +111,15 @@ export const animeCategories: readonly Category[] = [
         { value: 'buns', labelKey: 'a.hairBack.buns' }, { value: 'sidetail', labelKey: 'a.hairBack.sidetail' },
         { value: 'braid', labelKey: 'a.hairBack.braid' }, { value: 'hime', labelKey: 'a.hairBack.hime' },
         { value: 'messy', labelKey: 'a.hairBack.messy' }, { value: 'drills', labelKey: 'a.hairBack.drills' },
+        { value: 'curls', labelKey: 'a.hairBack.curls' }, { value: 'afro', labelKey: 'a.hairBack.afro' },
+        { value: 'dreads', labelKey: 'a.hairBack.dreads' }, { value: 'pixie', labelKey: 'a.hairBack.pixie' },
       ], 'long'),
       choice('hairFront', 'a.hairFront', [
         { value: 'straight', labelKey: 'a.hairFront.straight' }, { value: 'side', labelKey: 'a.hairFront.side' },
         { value: 'parted', labelKey: 'a.hairFront.parted' }, { value: 'curtain', labelKey: 'a.hairFront.curtain' },
         { value: 'blunt', labelKey: 'a.hairFront.blunt' }, { value: 'swept', labelKey: 'a.hairFront.swept' },
         { value: 'spiky', labelKey: 'a.hairFront.spiky' }, { value: 'forehead', labelKey: 'a.hairFront.forehead' },
-      ], 'straight'),
+      ], 'straight', { showIf: (p) => p.hairBack !== 'afro' }),
       color('hairColor', 'a.hairColor', HAIR_COLORS, '#a1604a'),
       color('hairTip', 'a.hairTip', HAIR_COLORS, '#f6a6c9'),
       slider('tipStrength', 'a.tipStrength', 0, 100, 1, 0),

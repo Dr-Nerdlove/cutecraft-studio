@@ -51,7 +51,7 @@ export function randomAnime(): AnimeParams {
   const pastelHair = hc.s > 0.5 && hc.l > 0.6;
   const browColor = pastelHair ? '#8a6a8e' : darkHair ? pick(['#2b2230', '#3a2a2a']) : hc.l > 0.6 ? '#a0785a' : '#5a3f3a';
 
-  const hairBack = weighted([['short', 1], ['bob', 1.2], ['long', 1.6], ['wavy', 1.3], ['ponytail', 1], ['twintails', 1.2], ['buns', 0.9], ['sidetail', 0.9], ['braid', 0.9], ['hime', 0.9], ['messy', 0.7], ['drills', 0.6]] as const);
+  const hairBack = weighted([['short', 1], ['bob', 1.2], ['long', 1.6], ['wavy', 1.3], ['ponytail', 1], ['twintails', 1.2], ['buns', 0.9], ['sidetail', 0.9], ['braid', 0.9], ['hime', 0.9], ['messy', 0.7], ['drills', 0.6], ['curls', 0.8], ['afro', 0.5], ['dreads', 0.5], ['pixie', 0.8]] as const);
   const top = weighted([['tshirt', 1], ['hoodie', 1], ['sailor', 1.2], ['sweater', 1], ['dress', 1.4]] as const);
 
   return {

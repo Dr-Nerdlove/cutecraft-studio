@@ -15,7 +15,7 @@ function earShape(bx: number, by: number, tx: number, ty: number, w: number): st
 export function headBehindSvg(ctx: Ctx): string {
   const { g, p } = ctx;
   const c = p.headAccColor;
-  const hw = g.hw, u = g.u, top = g.yTop;
+  const hw = g.hw, u = g.u, top = g.yTop - g.accLift;
   let out = '';
   if (p.headAcc === 'cat') {
     for (const s of [-1, 1] as const) {
@@ -42,7 +42,7 @@ export function headBehindSvg(ctx: Ctx): string {
 export function headFrontSvg(ctx: Ctx): string {
   const { g, p } = ctx;
   const c = p.headAccColor;
-  const hw = g.hw, u = g.u, top = g.yTop;
+  const hw = g.hw, u = g.u, top = g.yTop - g.accLift;
   switch (p.headAcc) {
     case 'bow':
       return group(bowSvg(ctx, 0, 0, hw * 0.24, c), { transform: `translate(${-hw * 0.6} ${top + u * 0.1}) rotate(-18)` });

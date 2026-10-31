@@ -435,12 +435,12 @@ function backMass(ctx: Ctx): BackMass {
     spec.n = 9;
     spec.varLen = 0.14;
     spec.depth = 0.09;
-    if (style === 'wavy') wave = hw * 0.22;
+    if (style === 'wavy') { wave = hw * 0.3; wTop = hw * 1.3; wEnd = Math.max(hw * 1.25, g.shHW * 1.28); }
     if (style === 'hime') { spec.n = 7; spec.varLen = 0.05; spec.depth = 0.035; spec.lean = 0.1; }
   }
   if (style === 'curls') { wTop = hw * 1.2; wEnd = hw * 1.1; spec.n = 7; spec.varLen = 0.06; }
-  if (style === 'dreads') { wTop = hw * 1.12; wEnd = hw * 1.02; spec.n = 6; spec.varLen = 0.1; }
-  if (style === 'pixie') { wTop = hw * 1.1; wEnd = hw * 1.06; spec.n = 7; spec.varLen = 0.2; spec.depth = 0.1; spec.lean = 0.4; }
+  if (style === 'dreads') { wTop = hw * 1.24; wEnd = hw * 1.02; spec.n = 6; spec.varLen = 0.1; }
+  if (style === 'pixie') { wTop = hw * 1.12; wEnd = hw * 1.06; spec.n = 9; spec.varLen = 0.2; spec.depth = 0.14; spec.lean = 0.45; }
   if (style === 'short' || style === 'buns' || style === 'ponytail' || style === 'twintails' || style === 'drills' || style === 'sidetail' || style === 'braid') { wTop = hw * 1.12; wEnd = hw * 1.0; spec.n = 6; spec.varLen = 0.08; }
   if (style === 'sidetail' || style === 'braid' || style === 'ponytail' || style === 'twintails' || style === 'buns') { wTop = hw * 1.08; wEnd = hw * 0.97; }
 
@@ -449,7 +449,7 @@ function backMass(ctx: Ctx): BackMass {
   let right: Pt[];
   // wavy hair: medium, even S-waves; both edges sway the same way and the width breathes a little
   const wavy = style === 'wavy';
-  const lambda = g.u * 0.95;
+  const lambda = g.u * 0.85;
   const n = wavy ? Math.max(8, Math.round(((yEnd - y0) / lambda) * 6)) : 5;
   const sway = (y: number, f: number): number => {
     const env = Math.min(1, Math.max(0, (y - y0) / (g.u * 0.35)));
@@ -457,7 +457,7 @@ function backMass(ctx: Ctx): BackMass {
   };
   const breathe = (y: number, f: number): number => {
     const env = Math.min(1, Math.max(0, (y - y0) / (g.u * 0.35)));
-    return env * env * (3 - 2 * env) * wave * 0.5 * Math.cos(((y - y0) / lambda) * Math.PI * 2) * (0.6 + 0.4 * f);
+    return env * env * (3 - 2 * env) * wave * 0.7 * Math.cos(((y - y0) / lambda) * Math.PI * 2) * (0.6 + 0.4 * f);
   };
   const rightTD: Pt[] = [];
   for (let i = 0; i <= n; i++) {
@@ -963,6 +963,8 @@ export function hairFrontSvg(ctx: Ctx): string {
     out += curlsSvg(ctx, fills, true);
   } else if (p.hairBack === 'dreads') {
     out += dreadsSvg(ctx, fills, true, { line: ctx.hairLine, shadeColor: fills.shade, dx: -g.lw * 2.2, dy: -g.lw * 1.2 });
+  } else if (p.hairBack === 'pixie') {
+    out += pixieSideburns(ctx, fills, lock);
   }
   // ahoge (grows from under the cap)
   if (p.ahoge) out += ahogeSvg(ctx, fills, g.yTop - u * 0.015);
@@ -1225,27 +1227,29 @@ function curlsSvg(ctx: Ctx, fills: { fill: string; shade: string }, front: boole
 
 // ---- dreadlocks ---------------------------------------------------------------------------------
 
-/** A small, delicate gold ring around a lock (the near half only). */
+/** A gold ring clasped around a lock (the near half in front, a dark sliver of the far half behind). */
 function goldRing(ctx: Ctx, cx: number, cy: number, halfW: number): string {
   const { g } = ctx;
-  const r = halfW * 1.1;
-  const d = `${M(cx - r, cy)}${Q(cx, cy + halfW * 0.7, cx + r, cy)}`;
-  const d2 = `${M(cx - r, cy - g.lw * 1.9)}${Q(cx, cy + halfW * 0.7 - g.lw * 1.9, cx + r, cy - g.lw * 1.9)}`;
+  const r = halfW * 1.22;
+  const sag = halfW * 0.8;
+  const front = `${M(cx - r, cy - sag * 0.1)}${Q(cx, cy + sag, cx + r, cy - sag * 0.1)}`;
+  const back = `${M(cx - r, cy - sag * 0.1)}${Q(cx, cy - sag * 0.75, cx + r, cy - sag * 0.1)}`;
+  const hi = `${M(cx - r * 0.78, cy + sag * 0.12)}${Q(cx - r * 0.4, cy + sag * 0.5, cx - r * 0.02, cy + sag * 0.52)}`;
   return (
-    stroke(ctx, d, '#a8791f', g.lw * 2.6, { opacity: 0.9 }) +
-    stroke(ctx, d, '#f2cd63', g.lw * 1.7) +
-    stroke(ctx, d2, '#a8791f', g.lw * 1.2, { opacity: 0.55 }) +
-    stroke(ctx, `${M(cx - r * 0.7, cy + halfW * 0.06)}${Q(cx - r * 0.3, cy + halfW * 0.3, cx, cy + halfW * 0.34)}`, '#fff6cf', g.lw * 0.8, { opacity: 0.9 })
+    stroke(ctx, back, '#8a5f12', g.lw * 2.4, { opacity: 0.65 }) +
+    stroke(ctx, front, '#8a5f12', g.lw * 5.2, { opacity: 0.9 }) +
+    stroke(ctx, front, '#f0c24a', g.lw * 3.6) +
+    stroke(ctx, front, '#ffe48a', g.lw * 1.5, { transform: `translate(0 ${-g.lw * 0.5})`, opacity: 0.8 }) +
+    stroke(ctx, hi, '#fffbe6', g.lw * 1.3, { opacity: 0.95 })
   );
 }
 
-/** One rope-like lock: tapered, rounded at the end, with ring-shaped segments and a lit side. */
+/** One soft, slightly tapered lock: a gently swaying S-curve, full at the root, with subtle twist marks. */
 function dreadSvg(ctx: Ctx, fills: { fill: string; shade: string }, x0: number, y0: number, len: number, o: { sway: number; w: number; phase: number; ring?: number }, opts: { line: string; shadeColor: string; dx: number; dy: number }): string {
   const { g } = ctx;
-  const u = g.u;
-  const n = 8;
-  const cx = (t: number): number => x0 + o.sway * len * t + Math.sin(t * 3.4 + o.phase) * o.w * 0.3;
-  const hwAt = (t: number): number => (o.w / 2) * (1 - 0.2 * t) * (1 + 0.06 * Math.sin(t * 17 + o.phase));
+  const n = 14;
+  const cx = (t: number): number => x0 + o.sway * len * t + Math.sin(t * 3.1 + o.phase) * o.w * 0.9 * Math.min(1, t * 2);
+  const hwAt = (t: number): number => (o.w / 2) * (1.1 - 0.62 * Math.pow(t, 1.1)) * (1 + 0.05 * Math.sin(t * 9 + o.phase * 1.7));
   const L: Pt[] = [];
   const R: Pt[] = [];
   for (let i = 0; i <= n; i++) {
@@ -1257,22 +1261,30 @@ function dreadSvg(ctx: Ctx, fills: { fill: string; shade: string }, x0: number, 
   const hE = hwAt(1);
   const d = smoothClosed([
     ...L,
-    { x: te.x - hE * 0.82, y: te.y + hE * 0.55 }, { x: te.x - hE * 0.25, y: te.y + hE * 0.98 }, { x: te.x + hE * 0.3, y: te.y + hE * 0.95 }, { x: te.x + hE * 0.82, y: te.y + hE * 0.5 },
+    { x: te.x - hE * 0.75, y: te.y + hE * 0.55 }, { x: te.x - hE * 0.1, y: te.y + hE * 0.95 }, { x: te.x + hE * 0.55, y: te.y + hE * 0.7 },
     ...R.slice().reverse(),
   ]);
-  const K = Math.max(4, Math.round(len / (u * 0.075)));
+  // faint twist marks: short slanted dashes, irregular and low in contrast (no full rings)
   let seg = '';
+  const K = Math.max(4, Math.round(len / (g.u * 0.1)));
   for (let k = 0; k < K; k++) {
-    const t = (k + 0.6 + 0.3 * hash(k * 1.7 + o.phase)) / (K + 0.5);
+    const t = (k + 0.5 + 0.5 * (hash(k * 1.7 + o.phase) - 0.5)) / K;
     const y = y0 + len * t;
-    const c = cx(t), h = hwAt(t);
-    const a = `${M(c - h * 1.02, y - h * 0.1)}${Q(c, y + h * 0.5, c + h * 1.02, y - h * 0.1)}`;
-    seg += stroke(ctx, a, darken(ctx.hairShade, 0.1), g.lw * 0.85, { opacity: 0.6 });
-    seg += stroke(ctx, `${M(c - h * 0.9, y + h * 0.14)}${Q(c - h * 0.2, y + h * 0.58, c + h * 0.5, y + h * 0.42)}`, ctx.hairLight, g.lw * 0.6, { opacity: 0.4 });
+    const c = cx(t) + (hash(k * 3.3 + o.phase) - 0.5) * hwAt(t) * 0.4, h = hwAt(t);
+    const s = k % 2 ? 1 : -1;
+    const a = `${M(c - h * 0.7, y - h * 0.1 * s)}${Q(c, y + h * 0.35, c + h * 0.7, y + h * 0.1 * s)}`;
+    seg += stroke(ctx, a, darken(ctx.hairShade, 0.08), g.lw * 0.6, { opacity: 0.18 });
   }
-  const hl: Pt[] = [];
-  for (let i = 1; i < n; i++) hl.push({ x: cx(i / n) - hwAt(i / n) * 0.42, y: y0 + len * (i / n) });
-  seg += stroke(ctx, smoothOpen(hl, 1 / 6), ctx.hairLight, o.w * 0.12, { opacity: 0.5 });
+  const line = (f: number, a: number, b: number): Pt[] => {
+    const pts: Pt[] = [];
+    for (let i = 0; i <= 8; i++) {
+      const t = lerp(a, b, i / 8);
+      pts.push({ x: cx(t) + hwAt(t) * f, y: y0 + len * t });
+    }
+    return pts;
+  };
+  seg += stroke(ctx, smoothOpen(line(0.55, 0.05, 0.95), 1 / 6), darken(ctx.hairShade, 0.1), o.w * 0.16, { opacity: 0.35 });
+  seg += stroke(ctx, smoothOpen(line(-0.42, 0.02, 0.85), 1 / 6), ctx.hairLight, o.w * 0.11, { opacity: 0.5 });
   let out = cel(ctx, d, fills.fill, { ...opts, inside: seg });
   if (o.ring !== undefined) out += goldRing(ctx, cx(o.ring), y0 + len * o.ring, hwAt(o.ring));
   return out;
@@ -1284,42 +1296,70 @@ function dreadsSvg(ctx: Ctx, fills: { fill: string; shade: string }, front: bool
   const hw = g.hw, u = g.u;
   const m = metrics(ctx);
   const endY = hairEnd(ctx);
-  const xs = front ? [-1.4, -1.2, -1.0, 1.0, 1.2, 1.4] : [-1.3, -1.0, -0.7, 0.7, 1.0, 1.3];
+  // back locks: drawn from the outside in, so the inner ones overlap; the extra ones fill the gaps
+  const xs = front ? [-1.42, -1.2, -1.0, 1.0, 1.22, 1.42] : [-1.4, -1.18, -0.95, -0.72, 0.72, 0.95, 1.18, 1.4];
   // (index -> position of the gold ring along the lock); only the front locks carry rings
   const rings: Record<number, number> = { 1: 0.5, 2: 0.7, 3: 0.4, 5: 0.6 };
   let out = '';
   xs.forEach((f, i) => {
-    const y0 = m.yc + u * (front ? 0.2 + 0.06 * (i % 3) : 0.12);
-    const k = (front ? 0.72 : 0.95) + 0.24 * hash(i * 3.1 + (front ? 5 : 2)) - 0.08 * (Math.abs(f) - 1);
+    const h = (a: number): number => hash(i * a + (front ? 5 : 2));
+    const y0 = m.yc + u * (front ? 0.2 + 0.07 * (i % 3) : 0.1 + 0.05 * (i % 2));
+    const k = (front ? 0.68 : 0.9) + 0.3 * h(3.1) - 0.1 * (Math.abs(f) - 1);
     const len = Math.max(u * 0.5, (endY - y0) * Math.min(1, k));
-    out += dreadSvg(ctx, fills, f * hw, y0, len, { sway: f * (front ? -0.015 : 0.045), w: hw * 0.27, phase: i * 2.3, ring: front ? rings[i] : undefined }, opts);
+    const w = hw * (0.2 + 0.07 * h(1.3));
+    out += dreadSvg(ctx, fills, f * hw, y0, len, { sway: f * (front ? -0.02 : 0.05) + (h(2.1) - 0.5) * 0.04, w, phase: i * 2.3, ring: front ? rings[i] : undefined }, opts);
   });
   return out;
 }
 
 // ---- pixie cut ------------------------------------------------------------------------------------
 
-/** A few short pointed tufts at the sides, the nape and the crown (drawn behind the hair mass). */
+/**
+ * Pointed flicks of the pixie cut behind the hair mass: lifted tufts around the crown, flicks behind
+ * the ears and small wisps at the nape. Their bases sit inside the mass, only the points show.
+ */
 function pixieTufts(ctx: Ctx, fills: { fill: string }, opts: { line: string; shadeColor: string; dx: number; dy: number }): string {
   const { g } = ctx;
   const m = metrics(ctx);
   const u = g.u, hw = g.hw;
   let out = '';
-  // beside the cheeks and ears, pointing down and out: [height below the temple, length, lean]
-  for (const sd of [-1, 1] as const) {
-    for (const [dy, len, lean] of [[0.1, 0.1, -0.3], [0.26, 0.12, -0.2], [0.42, 0.1, -0.3]] as const) {
-      const P: Pt = { x: sd * hw * (0.96 - 0.06 * (dy / 0.42)), y: m.yc + u * dy };
-      out += cel(ctx, tuftD(P, sd * 0.4, 0.92, len * u, sd * lean, u * 0.045), fills.fill, opts);
-    }
-    // nape: small tufts below the ears, close to the neck
-    out += cel(ctx, tuftD({ x: sd * hw * 0.5, y: g.yTop + u * 0.84 }, sd * 0.2, 0.98, u * 0.11, sd * -0.4, u * 0.045), fills.fill, opts);
-  }
-  const ring = skullArc(g, m.rx * 1.05, m.yc, m.vTop - u * 0.02, 0, Math.PI, 10);
-  for (const [i, len, lean] of [[2, 0.04, 0.4], [4, 0.05, 0.1], [6, 0.04, -0.2], [8, 0.05, -0.4]] as const) {
-    const P = ring[i];
-    const nx = P.x / (m.rx * 1.05), ny = (P.y - m.yc) / Math.max(1, m.yc - (g.yTop - u * 0.04));
+  const flick = (b: Pt, e: Pt, bend: number, w: number): string => cel(ctx, wispD(b, e, bend, w), fills.fill, opts);
+  // crown: lifted, slightly leaning tufts of uneven length
+  const ring = skullArc(g, m.rx * 1.02, m.yc, m.vTop - u * 0.02, 0, Math.PI, 12);
+  const crown: Array<[number, number, number]> = [[2, 0.07, 0.8], [3, 0.09, 0.7], [4, 0.06, 0.6], [5, 0.09, 0.7], [6, 0.06, 0.6], [7, 0.08, 0.7], [8, 0.07, 0.6]];
+  for (const [i, len, lean] of crown) {
+    const P = ring[Math.min(i, ring.length - 1)];
+    const nx = P.x / (m.rx * 1.02), ny = (P.y - m.yc) / Math.max(1, m.yc - (g.yTop - u * 0.04));
     const l = Math.hypot(nx, ny) || 1;
-    out += cel(ctx, tuftD(P, nx / l, ny / l, len * u, lean, u * 0.05), fills.fill, opts);
+    const dx = nx / l, dy = ny / l;
+    const b: Pt = { x: P.x - dx * u * 0.06, y: P.y - dy * u * 0.06 };
+    const e: Pt = { x: P.x + dx * len * u - dy * lean * len * u * 0.9, y: P.y + dy * len * u + dx * lean * len * u * 0.9 };
+    out += flick(b, e, lean * len * u * 0.5, u * 0.055);
+  }
+  for (const sd of [-1, 1] as const) {
+    // behind the ears: pointed flicks, down and out
+    out += flick({ x: sd * hw * 0.9, y: m.yc + u * 0.02 }, { x: sd * hw * 1.1, y: m.yc + u * 0.5 }, sd * u * 0.05, u * 0.065);
+    out += flick({ x: sd * hw * 0.85, y: m.yc + u * 0.18 }, { x: sd * hw * 0.93, y: m.yc + u * 0.66 }, sd * u * 0.045, u * 0.06);
+    // nape: short wisps below the ears, along the neck
+    out += flick({ x: sd * hw * 0.5, y: g.yTop + u * 0.7 }, { x: sd * hw * 0.62, y: g.yTop + u * 1.04 }, sd * u * 0.04, u * 0.055);
+    out += flick({ x: sd * hw * 0.34, y: g.yTop + u * 0.74 }, { x: sd * hw * 0.4, y: g.yTop + u * 1.0 }, sd * u * 0.03, u * 0.045);
+  }
+  return out;
+}
+
+/** Pointed sideburn wisps in front of the ears (drawn with the front hair), for the pixie cut. */
+function pixieSideburns(ctx: Ctx, fills: { fill: string; shade: string }, lock: LockSpec): string {
+  const { g } = ctx;
+  const u = g.u, hw = g.hw;
+  const opts = { line: ctx.hairLine, shadeColor: fills.shade, dx: -g.lw * 2, dy: -g.lw * 1.2 };
+  let out = '';
+  const flick = (b: Pt, e: Pt, bend: number, w: number): string => cel(ctx, wispD(b, e, bend, w), fills.fill, opts);
+  for (const sd of [-1, 1] as const) {
+    const sx = lock.tipX, ty = lock.tipY;
+    // long sideburn pointing down along the cheek, curling slightly towards the face
+    out += flick({ x: sd * sx * 1.0, y: ty - u * 0.2 }, { x: sd * sx * 0.88, y: ty + u * 0.34 }, -sd * u * 0.05, u * 0.065);
+    // a shorter flick in front of the ear, flicking outward
+    out += flick({ x: sd * sx * 1.04, y: ty - u * 0.14 }, { x: sd * (sx * 1.1 + hw * 0.03), y: ty + u * 0.16 }, sd * u * 0.035, u * 0.045);
   }
   return out;
 }

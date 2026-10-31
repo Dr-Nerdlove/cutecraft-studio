@@ -130,7 +130,8 @@ export function computeGeo(p: AnimeParams): Geo {
       p.hairBack === 'buns' ? 0.22 : 0,
       p.hairBack === 'messy' ? 0.14 : 0,
       afro ? afroTopU + (p.ahoge ? 0.3 : 0) : 0,
-      p.hairBack === 'pixie' ? 0.1 : 0,
+      p.hairBack === 'pixie' ? 0.14 : 0,
+      p.hairBack === 'dreads' ? 0.08 : 0,
       p.hairFront === 'spiky' ? 0.12 : 0,
       ({ none: 0, bow: 0.12, cat: 0.3, bunny: 0.62, flower: 0.1, crown: 0.22, beret: 0.3 }[p.headAcc]) + (afro ? 0.14 : 0),
     );
@@ -140,7 +141,7 @@ export function computeGeo(p: AnimeParams): Geo {
     { short: 1.25, bob: 1.35, long: 1.3, wavy: 1.38, ponytail: 2.0, twintails: 2.15, buns: 1.25, sidetail: 1.9, braid: 1.6, hime: 1.4, messy: 1.45, drills: 2.2,
       curls: 1.6, dreads: 1.55, pixie: 1.2, afro: afro ? afro.rx * AFRO_BUMP / hw : 1 }[p.hairBack] * hw;
   geo.hairHalf = hairHalf;
-  const longSpread = ['long', 'wavy', 'hime', 'curls', 'dreads'].includes(p.hairBack) ? geo.shHW * 1.12 : 0;
+  const longSpread = p.hairBack === 'wavy' ? geo.shHW * 1.5 : ['long', 'hime', 'curls', 'dreads'].includes(p.hairBack) ? geo.shHW * 1.12 : 0;
   const hemHalf = p.top === 'dress' ? hipHW * 1.12 + u * 0.16 + 4 : hipHW * 1.1 + u * 0.11 + 4;
   const bodyHalf = Math.max(geo.shHW + armR * 2 + armLen * Math.sin(geo.armAngle) + 4, hemHalf);
   geo.halfW = Math.max(hairHalf, longSpread, bodyHalf, p.headAcc === 'bunny' ? hw * 1.3 : 0);

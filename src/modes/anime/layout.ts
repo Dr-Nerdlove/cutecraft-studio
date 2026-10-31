@@ -13,26 +13,28 @@ export interface FaceLayout {
   mouthW: number;
 }
 
-const EYE_ASPECT = { round: 1.12, sparkly: 1.2, sleepy: 0.86, cat: 0.82, almond: 0.92, doe: 1.08, narrow: 0.68, happy: 0.55 } as const;
+// Height / width of the eye opening. Semi-realistic eyes are much flatter than classic anime eyes.
+const EYE_ASPECT = { round: 0.74, sparkly: 0.78, sleepy: 0.56, cat: 0.6, almond: 0.58, doe: 0.7, narrow: 0.46, happy: 0.42 } as const;
 
 export function faceLayout(ctx: Ctx): FaceLayout {
   const { g, p } = ctx;
   const sz = p.eyeSize / 100;
   const sp = p.eyeSpacing / 100;
-  const eyeY = g.yTop + g.u * (lerp(0.62, 0.57, g.k) + (p.eyeY / 100 - 0.5) * 0.12);
-  const eyeW = g.headW * lerp(0.165, 0.265, sz) * lerp(1.04, 0.96, g.k);
+  // eyes close to the middle of the head, like a real face
+  const eyeY = g.yTop + g.u * (0.535 + (p.eyeY / 100 - 0.5) * 0.08);
+  const eyeW = g.headW * lerp(0.2, 0.28, sz);
   const eyeH = eyeW * EYE_ASPECT[p.eyeShape];
   const edge = faceHalfWidthAt(g, p.faceShape, eyeY);
   // keep the eyes inside the face (and clear of the side locks) at every slider position
   const maxDX = Math.max(0, edge * 0.86 - eyeW / 2);
-  const eyeDX = Math.min(g.headW * lerp(0.15, 0.255, sp), maxDX);
-  const mouthY = g.yTop + g.u * lerp(0.855, 0.83, g.k);
-  const gap = g.u * 0.04;
-  const noseY = clamp(lerp(eyeY + eyeH / 2, mouthY, 0.5), eyeY + eyeH / 2 + gap * 0.3, mouthY - gap);
+  const eyeDX = Math.min(g.headW * lerp(0.18, 0.26, sp), maxDX);
+  const mouthY = g.yTop + g.u * 0.805;
+  const gap = g.u * 0.05;
+  const noseY = clamp(g.yTop + g.u * 0.7 + (eyeY - g.yTop - g.u * 0.535) * 0.5, eyeY + eyeH / 2 + gap, mouthY - gap * 1.4);
   return {
     eyeY, eyeDX, eyeW, eyeH,
-    browY: eyeY - eyeH * 0.5 - Math.max(eyeW * 0.2, g.u * 0.025),
+    browY: eyeY - eyeH * 0.5 - Math.max(eyeW * 0.24, g.u * 0.04),
     noseY, mouthY,
-    mouthW: g.headW * 0.125 * lerp(0.6, 1.45, p.mouthSize / 100),
+    mouthW: g.headW * 0.2 * lerp(0.7, 1.3, p.mouthSize / 100),
   };
 }

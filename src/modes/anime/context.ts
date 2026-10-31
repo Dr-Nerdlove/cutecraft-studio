@@ -1,4 +1,4 @@
-import { lighten, outline, shade } from '../../core/color';
+import { lighten, mix, outline, shade } from '../../core/color';
 import { group, path, smoothClosed } from '../../core/svg';
 import { computeGeo, facePoints, type Geo } from './geometry';
 import type { AnimeParams } from './schema';
@@ -19,6 +19,8 @@ export interface Ctx {
   /** Path of the face outline and the id of its clip path. */
   faceD: string;
   faceClip: string;
+  /** Id of the shared soft-blur filter (defined once per SVG by the renderer). */
+  soft: string;
 }
 
 export function makeCtx(p: AnimeParams, prefix: string): Ctx {
@@ -30,15 +32,19 @@ export function makeCtx(p: AnimeParams, prefix: string): Ctx {
     uid: (name) => `${prefix}${name}${counter++}`,
     faceD: smoothClosed(facePoints(g, p.faceShape)),
     faceClip: `${prefix}face`,
+    soft: `${prefix}soft`,
     skin: p.skin,
     skinShade: shade(p.skin, 1.15),
-    skinLine: outline(p.skin),
+    skinLine: mix(outline(p.skin), p.skin, 0.2),
     hair: p.hairColor,
     hairShade: shade(p.hairColor, 1.2),
     hairLight: lighten(p.hairColor, 0.16),
-    hairLine: outline(p.hairColor),
+    hairLine: softLine(p.hairColor),
   };
 }
+
+/** Default outline colour: the muted outline blended a little back towards the fill (lighter line art). */
+export const softLine = (fill: string): string => mix(outline(fill), fill, 0.3);
 
 interface CelOptions {
   /** Shift of the lit layer; the uncovered rim becomes the shadow. */
@@ -51,28 +57,32 @@ interface CelOptions {
   inside?: string;
 }
 
+/** Shading shift multiplier: semi-realistic shapes get a wider, blurred shadow rim. */
+const SHADE_SPREAD = 2.2;
+
 /**
- * A shape with soft cel shading: shadow colour underneath, the lit colour on top shifted
- * up-left (clipped to the shape), then the outline.
+ * A shape with soft shading: shadow colour underneath, the lit colour on top shifted up-left and
+ * blurred (clipped to the shape), so the shadow fades in softly along the lower-right rim; then the
+ * outline.
  */
 export function cel(ctx: Ctx, d: string, fill: string, o: CelOptions = {}): string {
   const lw = o.lineW ?? ctx.g.lw;
-  const line = o.line === undefined ? outline(fill) : o.line;
-  const dx = o.dx ?? -lw * 1.3;
-  const dy = o.dy ?? -lw * 0.9;
+  const line = o.line === undefined ? softLine(fill) : o.line;
+  const dx = (o.dx ?? -lw * 1.3) * SHADE_SPREAD;
+  const dy = (o.dy ?? -lw * 0.9) * SHADE_SPREAD;
   const shadeColor = o.shadeColor ?? shade(fill);
   const id = ctx.uid('cel');
   return (
     `<clipPath id="${id}">${path(d)}</clipPath>` +
     path(d, { fill: shadeColor }) +
-    group(path(d, { fill, transform: `translate(${dx} ${dy})` }) + (o.inside ?? ''), { 'clip-path': `url(#${id})` }) +
+    group(path(d, { fill, transform: `translate(${dx} ${dy})`, filter: `url(#${ctx.soft})` }) + (o.inside ?? ''), { 'clip-path': `url(#${id})` }) +
     (line ? path(d, { fill: 'none', stroke: line, 'stroke-width': lw, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }) : '')
   );
 }
 
 /** Plain filled shape with an outline. */
 export function flat(ctx: Ctx, d: string, fill: string, o: { line?: string | null; lineW?: number; extra?: Record<string, string | number> } = {}): string {
-  const line = o.line === undefined ? outline(fill) : o.line;
+  const line = o.line === undefined ? softLine(fill) : o.line;
   return path(d, {
     fill,
     stroke: line ?? undefined,

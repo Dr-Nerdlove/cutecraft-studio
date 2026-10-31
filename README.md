@@ -1,8 +1,8 @@
 # CuteCraft Studio
 
 A cute 2D character builder for the browser. Adjust everything from hair colour and facial features to body
-proportions and outfit, and watch the character change live. The first style mode is **Anime**, drawn with normal
-anime proportions. More style modes are planned, and an Android app built
+proportions and outfit, and watch the character change live. The first style mode is **Anime**, drawn in a
+semi-realistic anime style. More style modes are planned, and an Android app built
 from the same code.
 
 **Try it:** <https://dr-nerdlove.github.io/cutecraft-studio/> (works on phone, tablet and PC; on a phone, "Add to home screen" installs it like an app).

@@ -133,7 +133,9 @@ missing, with a recommendation, and let the people choose.
   **Android app** built from the same code (planned: Capacitor wrapper, separate change). The character is
   **drawn in 2D** (layered SVG), not 3D. The anime mode uses **normal anime proportions only** (the
   chibi-to-normal proportion slider was removed in Oct 2026 after user feedback; the `proportion` key stays in
-  saved data, hidden and ignored).
+  saved data, hidden and ignored). Since Oct 2026 (issue #6) the anime mode is drawn in a **semi-realistic anime
+  style** (reference: soft digital anime portraits): smaller almond eyes with a lash line, real nose and lips,
+  soft blurred shading (one shared blur filter per SVG, `ctx.soft`), fine light outlines, about 7 heads tall.
 - **Product languages:** **German and English**, switchable in the app. Every user-facing text lives in
   `src/i18n/` (one file per language, the English dictionary is type-checked against the German one, so a
   missing text fails the build).

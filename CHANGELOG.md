@@ -6,6 +6,8 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Changed
 
+- The anime mode now has a semi-realistic anime look: a slimmer face with a soft chin, smaller almond-shaped eyes with a dark lash line, eyelid crease, detailed iris and soft eyeshadow, a real nose with soft shading, full lips with a gloss highlight, tapered eyebrows, softer shading and finer, lighter outlines everywhere, wispy bangs and loose single hairs, and grown-up body proportions (about seven heads tall). Saved characters keep all their settings and are drawn in the new look.
+- New characters start with a defined nose, full lips, an oval face, lighter blush and no ahoge; the dice picks real noses and lips more often.
 - Hair is drawn more nicely: more strand lines, a shine band on the crown, a soft darker underside and gentle shading towards the tips.
 - New characters start with almond-shaped eyes; saved characters keep their eye shape.
 - Bodies can now be made much slimmer: the lower half of the build, shoulders, waist and hips sliders gives a clearly slender figure with narrower torso, thinner arms and legs. Characters at or above the default settings look exactly as before.

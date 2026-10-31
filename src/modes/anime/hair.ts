@@ -49,12 +49,13 @@ function styleBangTips(ctx: Ctx, tips: Pt[]): Pt[] {
   if (p.hairFront === 'blunt' || p.hairFront === 'spiky' || p.hairFront === 'forehead' || p.hairFront === 'swept') return tips;
   const hw = g.hw, u = g.u;
   const LEN = [0.03, -0.02, 0.0]; // in head heights, positive = longer
-  return tips.map((t, i) => {
+  const styled = tips.map((t, i) => {
     if (i === 0 || i === tips.length - 1) return t;
     // side-swept bangs sweep one way; the others fan out from the middle
     const dir = p.hairFront === 'side' ? 1 : clamp(t.x / (hw * 0.7), -1, 1);
     return { x: t.x + dir * hw * 0.07, y: t.y + LEN[i % 3] * u };
   });
+  return styled;
 }
 
 /** A soft darkening towards the lower part of a hair shape (gradient, clipped by the caller). */
@@ -559,13 +560,14 @@ export function hairFrontSvg(ctx: Ctx): string {
   // texture strands from the crown to the tips (dark lines with a light twin beside them)
   let strands = '';
   const crownX = crown * hw;
-  const sw = Math.max(0.7, g.lw * 0.7);
+  const sw = Math.max(0.4, g.lw * 0.55);
   for (let i = 1; i < tips.length - 1; i++) {
     const tp = tips[i];
-    const line = (off: number): string =>
-      `${M(crownX * 0.9 + (tp.x - crownX) * 0.12 + off, g.yTop - u * 0.02)}${Q(crownX + (tp.x - crownX) * 0.9 + off, g.yTop + (tp.y - g.yTop) * 0.35, tp.x * 0.98 + off, tp.y - u * 0.045)}`;
-    strands += stroke(ctx, line(0), ctx.hairShade, sw, { opacity: 0.5 });
-    strands += stroke(ctx, line(hw * 0.05), ctx.hairLight, sw * 0.9, { opacity: 0.4 });
+    const line = (off: number, end: number): string =>
+      `${M(crownX * 0.9 + (tp.x - crownX) * 0.12 + off, g.yTop - u * 0.02)}${Q(crownX + (tp.x - crownX) * 0.9 + off, g.yTop + (tp.y - g.yTop) * 0.35, tp.x * 0.98 + off, tp.y - u * end)}`;
+    strands += stroke(ctx, line(0, 0.04), ctx.hairShade, sw, { opacity: 0.4 });
+    strands += stroke(ctx, line(hw * 0.035, 0.07), ctx.hairLight, sw * 0.8, { opacity: 0.4 });
+    strands += stroke(ctx, line(-hw * 0.03, 0.09), ctx.hairShade, sw * 0.7, { opacity: 0.25 });
   }
   // flow lines on the side locks
   for (const sd of [-1, 1] as const) {
@@ -575,10 +577,10 @@ export function hairFrontSvg(ctx: Ctx): string {
   }
   // darker underside towards the tips, and the shine band (angel ring) with a bright core
   const underside = shadeOverlay(ctx, g.yTop + u * 0.12, Math.max(g.yTop + u * 0.5, ty), ctx.hairShade, 0.5);
+  // soft sheen on the crown instead of a hard shine band, with a few fine bright strands in it
   const ring =
-    shineBand(ctx, m, 0.05, 0.62, u * 0.085, ctx.hairLight, 0.55) +
-    shineBand(ctx, m, 0.7, 0.95, u * 0.05, ctx.hairLight, 0.45) +
-    shineBand(ctx, m, 0.12, 0.5, u * 0.03, '#ffffff', 0.5);
+    group(shineBand(ctx, m, 0.05, 0.62, u * 0.09, ctx.hairLight, 0.5) + shineBand(ctx, m, 0.7, 0.95, u * 0.05, ctx.hairLight, 0.4), { filter: `url(#${ctx.soft})` }) +
+    sheenStrands(ctx, m, crownX, tips);
   const ring2 = '';
 
   let out = fills.defs;
@@ -614,5 +616,67 @@ export function hairFrontSvg(ctx: Ctx): string {
     line: ctx.hairLine, shadeColor: fills.shade, dx: -g.lw * 2.4, dy: -g.lw * 1.3,
     inside: underside + strands + ring + ring2,
   });
+  out += bangWisps(ctx, mix(p.hairColor, ctx.hairShade, 0.55), tips);
+  out += flyaways(ctx, m, ty);
+  return out;
+}
+
+/** Fine bright strands running through the sheen on the crown. */
+function sheenStrands(ctx: Ctx, m: HairMetrics, crownX: number, tips: Pt[]): string {
+  const { g } = ctx;
+  const u = g.u;
+  let out = '';
+  for (let i = 1; i < tips.length - 1; i += 2) {
+    const tp = tips[i];
+    const x0 = crownX + (tp.x - crownX) * 0.25;
+    const y0 = m.yc - u * 0.2;
+    out += stroke(ctx, `${M(x0, y0)}${Q(crownX + (tp.x - crownX) * 0.7, m.yc - u * 0.12, tp.x * 0.9, m.yc - u * 0.02)}`, lighten(ctx.hairLight, 0.12), Math.max(0.35, g.lw * 0.45), { opacity: 0.55 });
+  }
+  return out;
+}
+
+/**
+ * Thin, tapered strands hanging a little below the bangs, curving to alternating sides: they break
+ * up the even row of locks into a soft, see-through fringe.
+ */
+function bangWisps(ctx: Ctx, fill: string, tips: Pt[]): string {
+  const { g, p } = ctx;
+  if (p.hairFront === 'blunt' || p.hairFront === 'forehead') return '';
+  const hw = g.hw, u = g.u;
+  let out = '';
+  for (let i = 1; i < tips.length - 1; i++) {
+    const A = tips[i - 1], B = tips[i];
+    const s = i % 2 ? 1 : -1;
+    const base: Pt = { x: (A.x + B.x) / 2 - s * hw * 0.02, y: Math.min(A.y, B.y) - u * 0.07 };
+    const end: Pt = { x: base.x + s * hw * 0.1, y: Math.max(A.y, B.y) + u * (0.01 + 0.025 * (i % 3)) };
+    const w = hw * 0.035;
+    // pointed at both ends, widest a third of the way down
+    const d =
+      M(base.x, base.y) +
+      C(base.x - w * 1.4, lerp(base.y, end.y, 0.3), end.x - s * w * 0.8, lerp(base.y, end.y, 0.7), end.x, end.y) +
+      C(end.x - s * w * 0.1, lerp(base.y, end.y, 0.65), base.x + w * 1.4, lerp(base.y, end.y, 0.3), base.x, base.y) + 'Z';
+    out += path(d, { fill });
+    out += stroke(ctx, `${M(lerp(base.x, end.x, 0.4), lerp(base.y, end.y, 0.4))}${Q(end.x - s * w * 0.6, lerp(base.y, end.y, 0.8), end.x, end.y)}`, ctx.hairLine, g.lw * 0.45, { opacity: 0.45 });
+  }
+  return out;
+}
+
+/** Loose single hairs around the head: the soft, natural edge of semi-realistic hair. */
+function flyaways(ctx: Ctx, m: HairMetrics, lockEnd: number): string {
+  const { g } = ctx;
+  const hw = g.hw, u = g.u;
+  const col = ctx.p.hairColor;
+  const w = Math.max(0.3, g.lw * 0.45);
+  let out = '';
+  for (const s of [-1, 1] as const) {
+    const x = (f: number): number => s * hw * f;
+    // lifting off the crown
+    out += stroke(ctx, `${M(x(0.35), g.yTop + u * 0.0)}${Q(x(0.6), g.yTop - u * 0.035, x(0.82), g.yTop + u * 0.03)}`, col, w, { opacity: 0.7 });
+    // off the temples
+    out += stroke(ctx, `${M(s * m.rx * 0.98, m.yc)}${C(x(1.2), m.yc + u * 0.12, x(1.08), m.yc + u * 0.25, x(1.25), m.yc + u * 0.38)}`, col, w, { opacity: 0.7 });
+    // along the side lock
+    const y1 = Math.min(lockEnd, g.yChin + u * 0.3);
+    out += stroke(ctx, `${M(x(1.0), m.yc + u * 0.3)}${C(x(1.18), lerp(m.yc, y1, 0.5), x(0.98), lerp(m.yc, y1, 0.75), x(1.12), y1)}`, col, w * 0.9, { opacity: 0.6 });
+  }
   return out;
 }

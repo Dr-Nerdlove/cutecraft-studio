@@ -1,6 +1,6 @@
-import { darken, mix, saturate } from '../../core/color';
-import { C, L, M, Q, circle, ellipse, group, lerp, path } from '../../core/svg';
-import { cel, stroke, type Ctx } from './context';
+import { darken, lighten, mix } from '../../core/color';
+import { C, L, M, Q, circle, ellipse, group, lerp, path, smoothOpen, type Pt } from '../../core/svg';
+import { stroke, type Ctx } from './context';
 import { faceLayout } from './layout';
 
 /** Ears sit behind the face. */
@@ -9,18 +9,37 @@ export function earsSvg(ctx: Ctx): string {
   const lo = faceLayout(ctx);
   let out = '';
   for (const s of [-1, 1] as const) {
-    const x = s * g.hw * 0.97;
-    out += ellipse(x, lo.eyeY + g.u * 0.02, g.hw * 0.13, g.u * 0.075, { fill: p.skin, stroke: ctx.skinLine, 'stroke-width': g.lw });
-    out += ellipse(x + s * g.hw * 0.01, lo.eyeY + g.u * 0.025, g.hw * 0.055, g.u * 0.04, { fill: ctx.skinShade, opacity: 0.8 });
+    const x = s * g.hw * 0.93;
+    const y = lo.eyeY + g.u * 0.05;
+    out += ellipse(x, y, g.hw * 0.1, g.u * 0.085, { fill: p.skin, stroke: ctx.skinLine, 'stroke-width': g.lw * 0.8, transform: `rotate(${s * 8} ${x} ${y})` });
+    out += stroke(ctx, `${M(x + s * g.hw * 0.04, y - g.u * 0.05)}${Q(x + s * g.hw * 0.07, y, x + s * g.hw * 0.02, y + g.u * 0.045)}`, ctx.skinShade, g.lw * 1.4, { opacity: 0.8 });
   }
   return out;
 }
 
 export function faceBaseSvg(ctx: Ctx): string {
   const { g } = ctx;
+  const lo = faceLayout(ctx);
+  const side = ctx.uid('fside');
+  const glow = ctx.uid('fglow');
+  const shadow = darken(ctx.skinShade, 0.03);
+  // light from the upper left: soft shadow along both sides (stronger on the right), a warm glow on
+  // the cheeks and a gentle shade along the jaw
+  const defs =
+    `<linearGradient id="${side}" x1="0" y1="0" x2="1" y2="0">` +
+    `<stop offset="0" stop-color="${shadow}" stop-opacity="0.55"/><stop offset="0.22" stop-color="${shadow}" stop-opacity="0"/>` +
+    `<stop offset="0.7" stop-color="${shadow}" stop-opacity="0"/><stop offset="1" stop-color="${shadow}" stop-opacity="0.8"/></linearGradient>` +
+    `<radialGradient id="${glow}"><stop offset="0" stop-color="${lighten(ctx.skin, 0.05)}" stop-opacity="0.9"/><stop offset="1" stop-color="${lighten(ctx.skin, 0.05)}" stop-opacity="0"/></radialGradient>`;
+  const inside =
+    path(ctx.faceD, { fill: `url(#${side})` }) +
+    ellipse(g.hw * 0.25, g.yChin - g.u * 0.02, g.hw * 0.95, g.u * 0.16, { fill: shadow, opacity: 0.35, filter: `url(#${ctx.soft})` }) +
+    ellipse(-g.hw * 0.12, lo.eyeY + g.u * 0.08, g.hw * 0.75, g.u * 0.3, { fill: `url(#${glow})` });
   return (
+    `<defs>${defs}</defs>` +
     `<clipPath id="${ctx.faceClip}">${path(ctx.faceD)}</clipPath>` +
-    cel(ctx, ctx.faceD, ctx.skin, { line: ctx.skinLine, shadeColor: ctx.skinShade, dx: -g.lw * 1.2, dy: -g.lw * 1.2 })
+    path(ctx.faceD, { fill: ctx.skin }) +
+    group(inside, { 'clip-path': `url(#${ctx.faceClip})` }) +
+    path(ctx.faceD, { fill: 'none', stroke: ctx.skinLine, 'stroke-width': g.lw, 'stroke-linejoin': 'round', opacity: 0.8 })
   );
 }
 
@@ -30,20 +49,14 @@ export function blushSvg(ctx: Ctx): string {
   if (a <= 0.01) return '';
   const lo = faceLayout(ctx);
   const id = ctx.uid('blush');
-  const defs = `<radialGradient id="${id}"><stop offset="0" stop-color="${p.blushColor}" stop-opacity="${(0.25 + 0.7 * a).toFixed(2)}"/><stop offset="0.6" stop-color="${p.blushColor}" stop-opacity="${(0.15 + 0.5 * a).toFixed(2)}"/><stop offset="1" stop-color="${p.blushColor}" stop-opacity="0"/></radialGradient>`;
+  const defs = `<radialGradient id="${id}"><stop offset="0" stop-color="${p.blushColor}" stop-opacity="${(0.12 + 0.5 * a).toFixed(2)}"/><stop offset="0.55" stop-color="${p.blushColor}" stop-opacity="${(0.06 + 0.3 * a).toFixed(2)}"/><stop offset="1" stop-color="${p.blushColor}" stop-opacity="0"/></radialGradient>`;
   let out = defs;
   for (const s of [-1, 1] as const) {
-    const cx = s * lo.eyeDX * 1.04;
-    const cy = lo.eyeY + lo.eyeH * 0.58;
-    out += ellipse(cx, cy, lo.eyeW * 0.62, lo.eyeW * 0.33, { fill: `url(#${id})` });
-    if (a > 0.6) {
-      const hatch = darken(saturate(p.blushColor, 0.1), 0.12);
-      for (let i = -1; i <= 1; i++) {
-        const x = cx + i * lo.eyeW * 0.15;
-        out += stroke(ctx, `${M(x - lo.eyeW * 0.04, cy + lo.eyeW * 0.07)}${L(x + lo.eyeW * 0.05, cy - lo.eyeW * 0.06)}`, hatch, Math.max(0.7, g.lw * 0.6), { opacity: 0.55 * a });
-      }
-    }
+    // broad, soft blush on the cheekbones, a little below and outside the eyes
+    out += ellipse(s * (lo.eyeDX + lo.eyeW * 0.15), lo.eyeY + g.u * 0.12, lo.eyeW * 0.95, g.u * 0.085, { fill: `url(#${id})` });
   }
+  // a faint flush across the bridge of the nose
+  out += ellipse(0, lerp(lo.eyeY, lo.noseY, 0.55), lo.eyeDX * 0.75, g.u * 0.045, { fill: `url(#${id})`, opacity: (0.7 * a).toFixed(2) });
   return out;
 }
 
@@ -67,40 +80,61 @@ export function noseSvg(ctx: Ctx): string {
   const { g, p } = ctx;
   if (p.nose === 'none') return '';
   const lo = faceLayout(ctx);
-  const a = Math.max(1.4, lo.eyeW * 0.1);
-  const col = mix(ctx.skinLine, '#a85a52', 0.3);
-  if (p.nose === 'dot') {
-    return ellipse(0, lo.noseY, a * 0.55, a * 0.4, { fill: col, opacity: 0.75 });
-  }
+  const a = g.headW * 0.045;
   const y = lo.noseY;
-  const sw = Math.max(0.8, g.lw * 0.75);
-  const tint = mix(ctx.skinShade, '#a85a52', 0.25);
-  if (p.nose === 'button') {
-    // small soft rounded tip with tiny nostril hints
-    return (
-      stroke(ctx, `${M(-a * 0.75, y + a * 0.25)}${Q(0, y + a * 0.95, a * 0.75, y + a * 0.25)}`, col, sw, { opacity: 0.8 }) +
-      ellipse(0, y - a * 0.1, a * 0.55, a * 0.42, { fill: tint, opacity: 0.6 }) +
-      ellipse(-a * 0.55, y + a * 0.45, a * 0.16, a * 0.11, { fill: col, opacity: 0.8 }) +
-      ellipse(a * 0.55, y + a * 0.45, a * 0.16, a * 0.11, { fill: col, opacity: 0.8 })
-    );
+  const col = mix(ctx.skinLine, '#a85a52', 0.3);
+  const tint = darken(mix(ctx.skinShade, '#b0605a', 0.25), 0.03);
+  const sw = Math.max(0.5, g.lw * 0.8);
+  const soft = `url(#${ctx.soft})`;
+  // shared pieces of a semi-realistic nose (light from the upper left)
+  const tipShadow = path(`${M(-a * 1.05, y + a * 0.15)}${Q(0, y + a * 1.1, a * 1.15, y + a * 0.1)}${Q(a * 0.1, y + a * 0.5, -a * 1.05, y + a * 0.15)}Z`, { fill: tint, opacity: 0.55, filter: soft });
+  const highlight = ellipse(-a * 0.2, y - a * 0.2, a * 0.32, a * 0.26, { fill: '#ffffff', opacity: 0.45, filter: soft });
+  const nostrils = (o: number): string =>
+    stroke(ctx, `${M(-a * 0.95, y + a * 0.05)}${Q(-a * 0.95, y + a * 0.6, -a * 0.32, y + a * 0.52)}`, col, sw, { opacity: o * 0.8 }) +
+    stroke(ctx, `${M(a * 0.95, y + a * 0.05)}${Q(a * 0.95, y + a * 0.6, a * 0.32, y + a * 0.52)}`, col, sw, { opacity: o });
+  switch (p.nose) {
+    case 'dot':
+      return tipShadow + ellipse(0, y + a * 0.3, a * 0.35, a * 0.22, { fill: col, opacity: 0.6 });
+    case 'button':
+      return tipShadow + highlight + ellipse(-a * 0.5, y + a * 0.5, a * 0.17, a * 0.11, { fill: col, opacity: 0.7 }) + ellipse(a * 0.5, y + a * 0.5, a * 0.17, a * 0.11, { fill: col, opacity: 0.8 });
+    case 'soft':
+      return tipShadow + highlight + nostrils(0.45);
+    case 'defined': {
+      // shadow along the right side of the bridge, from between the eyes down to the tip
+      const top = lo.eyeY + lo.eyeH * 0.2;
+      const bridge = stroke(ctx, `${M(a * 0.45, top)}${C(a * 0.5, lerp(top, y, 0.4), a * 0.85, lerp(top, y, 0.75), a * 0.75, y - a * 0.2)}`, tint, a * 0.55, { opacity: 0.4, filter: soft });
+      return bridge + tipShadow + highlight + nostrils(0.7);
+    }
+    case 'line':
+      return tipShadow + stroke(ctx, `${M(a * 0.15, y - a * 1.2)}${Q(a * 0.9, y + a * 0.1, a * 0.05, y + a * 0.55)}`, col, sw, { opacity: 0.75 });
   }
-  if (p.nose === 'defined') {
-    // thin bridge line from between the eyes into a small tip shadow
-    const top = lo.eyeY + lo.eyeH * 0.1;
-    const bx = -a * 0.35;
-    return (
-      stroke(ctx, `${M(a * 0.05, top)}${C(bx * 0.4, lerp(top, y, 0.45), bx * 1.3, lerp(top, y, 0.75), bx, y - a * 0.1)}${Q(-a * 0.15, y + a * 0.45, a * 0.5, y + a * 0.45)}`, col, Math.max(0.7, g.lw * 0.6), { opacity: 0.6 }) +
-      ellipse(a * 0.1, y + a * 0.35, a * 0.55, a * 0.22, { fill: tint, opacity: 0.35 })
-    );
-  }
-  if (p.nose === 'soft') {
-    // subtle shadow wedge under the tip
-    return (
-      path(`${M(-a * 0.7, y + a * 0.45)}${Q(0, y - a * 0.35, a * 0.7, y + a * 0.45)}${Q(0, y + a * 0.95, -a * 0.7, y + a * 0.45)}Z`, { fill: tint, opacity: 0.5 }) +
-      ellipse(-a * 0.08, y - a * 0.05, a * 0.22, a * 0.16, { fill: '#ffffff', opacity: 0.4 })
-    );
-  }
-  return stroke(ctx, `${M(-a * 0.2, lo.noseY - a * 0.5)}${Q(a * 0.7, lo.noseY + a * 0.1, -a * 0.2, lo.noseY + a * 0.55)}`, col, Math.max(0.8, g.lw * 0.75), { opacity: 0.85 });
+}
+
+/**
+ * Closed lips: upper lip with a cupid's bow, fuller lower lip with a gloss highlight, a soft shadow
+ * underneath. `lift` raises the corners (smile), `scale` changes the width, `tint` the colour strength.
+ */
+function lips(ctx: Ctx, w: number, y: number, lift: number, scale: number, tint: number): string {
+  const { g } = ctx;
+  const hw = w * 0.62 * scale;
+  const base = mix(ctx.skin, '#d24a64', tint);
+  const upperC = darken(base, 0.08);
+  const lineC = mix(darken(base, 0.3), '#4a1424', 0.45);
+  const cy = y - lift;
+  const upper = `${M(-hw, cy)}${C(-hw * 0.6, y - w * 0.06, -w * 0.2, y - w * 0.22, -w * 0.1, y - w * 0.2)}${Q(0, y - w * 0.2, 0, y - w * 0.13)}${Q(0, y - w * 0.2, w * 0.1, y - w * 0.2)}${C(w * 0.2, y - w * 0.22, hw * 0.6, y - w * 0.06, hw, cy)}`;
+  const mid = `${Q(0, y + w * 0.06 + lift * 0.4, -hw, cy)}`;
+  const lower = `${M(-hw, cy)}${Q(0, y + w * 0.06 + lift * 0.4, hw, cy)}${C(hw * 0.7, y + w * 0.36, -hw * 0.7, y + w * 0.36, -hw, cy)}Z`;
+  const gid = ctx.uid('lip');
+  const defs = `<radialGradient id="${gid}" cx="0.45" cy="0.35" r="0.7"><stop offset="0" stop-color="${lighten(base, 0.07)}"/><stop offset="1" stop-color="${darken(base, 0.05)}"/></radialGradient>`;
+  return (
+    `<defs>${defs}</defs>` +
+    ellipse(0, y + w * 0.42, hw * 0.55, w * 0.1, { fill: ctx.skinShade, opacity: 0.45, filter: `url(#${ctx.soft})` }) +
+    path(lower, { fill: `url(#${gid})` }) +
+    path(upper + mid + 'Z', { fill: upperC }) +
+    stroke(ctx, `${M(-hw * 1.04, cy - lift * 0.1)}${Q(0, y + w * 0.06 + lift * 0.4, hw * 1.04, cy - lift * 0.1)}`, lineC, Math.max(0.5, g.lw * 0.9)) +
+    ellipse(-w * 0.06, y + w * 0.16, w * 0.15, w * 0.04, { fill: '#ffffff', opacity: 0.55 }) +
+    ellipse(-w * 0.12, y - w * 0.15, w * 0.05, w * 0.018, { fill: '#ffffff', opacity: 0.4 })
+  );
 }
 
 export function mouthSvg(ctx: Ctx): string {
@@ -112,14 +146,9 @@ export function mouthSvg(ctx: Ctx): string {
   const inner = darken(mix(lip, '#5a1a2e', 0.5), 0.02);
   const sw = Math.max(0.9, g.lw * 0.95);
   switch (p.mouth) {
-    case 'smile': {
-      const d = `${M(-w / 2, y)}${Q(0, y + w * 0.42, w / 2, y)}`;
-      return (
-        stroke(ctx, d, lip, sw) +
-        stroke(ctx, `${M(-w / 2, y)}${L(-w / 2 - w * 0.06, y - w * 0.07)}`, lip, sw * 0.8) +
-        stroke(ctx, `${M(w / 2, y)}${L(w / 2 + w * 0.06, y - w * 0.07)}`, lip, sw * 0.8)
-      );
-    }
+    case 'smile':
+      // closed, softly smiling lips
+      return lips(ctx, w, y, w * 0.07, 0.95, 0.4);
     case 'open': {
       const id = ctx.uid('mouth');
       const d = `${M(-w * 0.52, y - w * 0.02)}${Q(0, y + w * 0.12, w * 0.52, y - w * 0.02)}${C(w * 0.48, y + w * 0.62, -w * 0.48, y + w * 0.62, -w * 0.52, y - w * 0.02)}Z`;
@@ -144,28 +173,11 @@ export function mouthSvg(ctx: Ctx): string {
         ellipse(0, y + ry * 0.4, rx, ry, { fill: 'none', stroke: lip, 'stroke-width': sw })
       );
     }
-    case 'pout': {
-      return (
-        stroke(ctx, `${M(-w * 0.3, y + w * 0.04)}${Q(-w * 0.15, y - w * 0.1, 0, y)}${Q(w * 0.15, y - w * 0.1, w * 0.3, y + w * 0.04)}`, lip, sw) +
-        stroke(ctx, `${M(-w * 0.15, y + w * 0.16)}${Q(0, y + w * 0.24, w * 0.15, y + w * 0.16)}`, lip, sw * 0.8, { opacity: 0.8 })
-      );
-    }
-    case 'lips': {
-      // soft rounded lips: tinted fill derived from the skin, light upper line, gentle highlight
-      const fill = mix(ctx.skin, '#e8566f', 0.6);
-      const upperFill = darken(fill, 0.04);
-      const hw = w * 0.58;
-      const upper = `${M(-hw, y)}${C(-hw * 0.55, y - w * 0.04, -w * 0.14, y - w * 0.17, 0, y - w * 0.09)}${C(w * 0.14, y - w * 0.17, hw * 0.55, y - w * 0.04, hw, y)}`;
-      const lower = `${C(hw * 0.65, y + w * 0.3, -hw * 0.65, y + w * 0.3, -hw, y)}Z`;
-      const mid = `${M(-hw, y)}${Q(0, y + w * 0.06, hw, y)}`;
-      return (
-        path(upper + lower, { fill }) +
-        path(`${M(-hw, y)}${C(-hw * 0.55, y - w * 0.04, -w * 0.14, y - w * 0.17, 0, y - w * 0.09)}${C(w * 0.14, y - w * 0.17, hw * 0.55, y - w * 0.04, hw, y)}${Q(0, y + w * 0.06, -hw, y)}Z`, { fill: upperFill, opacity: 0.55 }) +
-        stroke(ctx, upper, lip, sw * 0.6, { opacity: 0.7 }) +
-        stroke(ctx, mid, lip, sw) +
-        ellipse(0, y + w * 0.15, w * 0.17, w * 0.045, { fill: '#ffffff', opacity: 0.6 })
-      );
-    }
+    case 'pout':
+      // small, full lips
+      return lips(ctx, w * 0.9, y, -w * 0.02, 0.72, 0.6);
+    case 'lips':
+      return lips(ctx, w, y, 0, 1, 0.55);
     case 'smirk': {
       // one-sided smile: the right corner lifts more
       const d = `${M(-w * 0.45, y + w * 0.04)}${Q(-w * 0.05, y + w * 0.2, w * 0.2, y + w * 0.06)}${Q(w * 0.4, y - w * 0.02, w * 0.52, y - w * 0.14)}`;
@@ -208,30 +220,38 @@ export function mouthSvg(ctx: Ctx): string {
 export function browsSvg(ctx: Ctx): string {
   const { g, p } = ctx;
   const lo = faceLayout(ctx);
-  const bw = lo.eyeW * 0.92;
-  const h = bw * 0.38;
-  const sw = Math.min(7, Math.max(0.9, g.headW * lerp(0.011, 0.03, p.browThickness / 100)));
+  const bw = lo.eyeW * 1.12;
+  const h = bw * 0.3;
+  const th = Math.min(6, Math.max(0.8, g.headW * lerp(0.014, 0.036, p.browThickness / 100)));
   let out = '';
   for (const s of [-1, 1] as const) {
-    const cx = s * (lo.eyeDX + lo.eyeW * 0.02);
+    const cx = s * (lo.eyeDX + lo.eyeW * 0.06);
     const X = (ox: number): number => cx + s * ox;
-    let d = '';
+    // centre line: inner end, control point, outer end
+    let a: Pt, c: Pt, b: Pt;
     switch (p.brow) {
-      case 'soft':
-        d = `${M(X(-bw / 2), lo.browY + h * 0.15)}${Q(X(0), lo.browY - h * 0.55, X(bw / 2), lo.browY + h * 0.2)}`;
-        break;
-      case 'straight':
-        d = `${M(X(-bw / 2), lo.browY + h * 0.02)}${Q(X(0), lo.browY - h * 0.06, X(bw / 2), lo.browY - h * 0.02)}`;
-        break;
-      case 'raised':
-        d = `${M(X(-bw / 2), lo.browY + h * 0.1)}${Q(X(-bw * 0.05), lo.browY - h * 1.05, X(bw / 2), lo.browY + h * 0.1)}`;
-        break;
-      case 'worried':
-        d = `${M(X(-bw / 2), lo.browY - h * 0.5)}${Q(X(0), lo.browY - h * 0.05, X(bw / 2), lo.browY + h * 0.45)}`;
-        break;
+      case 'soft': a = { x: X(-bw / 2), y: lo.browY + h * 0.2 }; c = { x: X(0), y: lo.browY - h * 0.55 }; b = { x: X(bw / 2), y: lo.browY + h * 0.35 }; break;
+      case 'straight': a = { x: X(-bw / 2), y: lo.browY + h * 0.05 }; c = { x: X(0.05 * bw), y: lo.browY - h * 0.2 }; b = { x: X(bw / 2), y: lo.browY + h * 0.1 }; break;
+      case 'raised': a = { x: X(-bw / 2), y: lo.browY + h * 0.15 }; c = { x: X(-bw * 0.05), y: lo.browY - h * 1.1 }; b = { x: X(bw / 2), y: lo.browY + h * 0.2 }; break;
+      case 'worried': a = { x: X(-bw / 2), y: lo.browY - h * 0.45 }; c = { x: X(0), y: lo.browY - h * 0.1 }; b = { x: X(bw / 2), y: lo.browY + h * 0.5 }; break;
     }
-    out += stroke(ctx, d, p.browColor, sw, { opacity: 0.92 });
+    // tapered brow: full at the inner end, thin at the tail
+    const top: Pt[] = [];
+    const bot: Pt[] = [];
+    const N = 8;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const q: Pt = { x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y };
+      const w = th * (t < 0.15 ? lerp(0.75, 1, t / 0.15) : lerp(1, 0.18, (t - 0.15) / 0.85));
+      top.push({ x: q.x, y: q.y - w * 0.55 });
+      bot.push({ x: q.x, y: q.y + w * 0.45 });
+    }
+    const gid = ctx.uid('brow');
+    out +=
+      `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${a.x.toFixed(2)}" y1="0" x2="${b.x.toFixed(2)}" y2="0">` +
+      `<stop offset="0" stop-color="${p.browColor}" stop-opacity="0.5"/><stop offset="0.3" stop-color="${p.browColor}" stop-opacity="0.92"/>` +
+      `<stop offset="1" stop-color="${p.browColor}" stop-opacity="0.8"/></linearGradient>` +
+      path(smoothOpen(top) + L(bot[N].x, bot[N].y) + smoothOpen(bot.slice().reverse(), 1 / 6, false) + 'Z', { fill: `url(#${gid})` });
   }
   return out;
 }
-

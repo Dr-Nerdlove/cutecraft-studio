@@ -14,7 +14,10 @@ import type { AnimeParams } from './schema';
 export function renderAnime(p: AnimeParams, prefix: string, view: ViewKind = 'full'): string {
   const ctx = makeCtx(p, prefix);
   const { g } = ctx;
+  // one shared soft blur (local figure units) used by the shading of every shape
+  const blur = (g.lw * 2.2).toFixed(2);
   const figure =
+    `<defs><filter id="${ctx.soft}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${blur}"/></filter></defs>` +
     groundShadowSvg(ctx) +
     hairBackSvg(ctx) +
     legsSvg(ctx) +

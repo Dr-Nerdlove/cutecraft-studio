@@ -43,7 +43,18 @@ export interface Geo {
   topExtra: number;
   halfW: number;
   hairHalf: number; // half width of the hair (used by the portrait view)
+  /** How far head accessories sit higher than the skull top (afro, curls and dreads lift them onto the hair). */
+  accLift: number;
 }
+
+/** Size of the afro cloud: `cy` is the centre's distance below the skull top, plus the radii. */
+export function afroDims(u: number, hw: number, hairLength: number): { cy: number; rx: number; ry: number } {
+  const rx = hw * lerp(1.45, 1.8, hairLength / 100);
+  return { cy: u * 0.3, rx, ry: rx };
+}
+
+/** Largest reach of the afro bumps beyond its base ellipse (as a fraction of the radius). */
+export const AFRO_BUMP = 1.1;
 
 export const VIEW_W = 400;
 export const VIEW_H = 600;
@@ -104,25 +115,36 @@ export function computeGeo(p: AnimeParams): Geo {
     chestBulge: lerp(0.0, 0.07, build) * (shW / 2),
     armR, armLen, armAngle: lerp(0.1, 0.085, k),
     legCx, thighHW, kneeHW, ankleHW,
-    scale: 1, topExtra: 0, halfW: 0, hairHalf: 0,
+    scale: 1, topExtra: 0, halfW: 0, hairHalf: 0, accLift: 0,
   };
 
   // --- extents for scale-to-fit (generous estimates of everything that sticks out) ---
+  const afro = p.hairBack === 'afro' ? afroDims(u, hw, p.hairLength) : null;
+  // top of the afro cloud above the skull top, in head heights
+  const afroTopU = afro ? (afro.rx * AFRO_BUMP - afro.cy) / u : 0;
+  // head accessories and the ahoge sit on top of voluminous hair (in head heights above the skull top)
+  const lift = afro ? 0.14 : p.hairBack === 'curls' ? 0.14 : p.hairBack === 'dreads' ? 0.09 : 0;
+  geo.accLift = u * lift;
   const topU =
     Math.max(
       0.09,
-      p.ahoge ? 0.32 : 0,
+      p.ahoge ? 0.32 + lift : 0,
       p.hairBack === 'buns' ? 0.22 : 0,
       p.hairBack === 'messy' ? 0.14 : 0,
+      afro ? afroTopU + (p.ahoge ? 0.3 : 0) : 0,
+      p.hairBack === 'pixie' ? 0.17 : 0,
+      p.hairBack === 'dreads' ? 0.1 : 0,
+      p.hairBack === 'curls' ? 0.2 : 0,
       p.hairFront === 'spiky' ? 0.12 : 0,
-      { none: 0, bow: 0.12, cat: 0.3, bunny: 0.62, flower: 0.1, crown: 0.22, beret: 0.3 }[p.headAcc],
+      ({ none: 0, bow: 0.12, cat: 0.3, bunny: 0.62, flower: 0.1, crown: 0.22, beret: 0.3 }[p.headAcc]) + lift,
     );
   geo.topExtra = topU * u;
 
   const hairHalf =
-    { short: 1.25, bob: 1.35, long: 1.3, wavy: 1.38, ponytail: 2.0, twintails: 2.15, buns: 1.25, sidetail: 1.9, braid: 1.6, hime: 1.4, messy: 1.45, drills: 2.2 }[p.hairBack] * hw;
+    { short: 1.25, bob: 1.35, long: 1.3, wavy: 1.38, ponytail: 2.0, twintails: 2.15, buns: 1.25, sidetail: 1.9, braid: 1.6, hime: 1.4, messy: 1.45, drills: 2.2,
+      curls: 2.0, dreads: 1.55, pixie: 1.2, afro: afro ? afro.rx * AFRO_BUMP / hw : 1 }[p.hairBack] * hw;
   geo.hairHalf = hairHalf;
-  const longSpread = ['long', 'wavy', 'hime'].includes(p.hairBack) ? geo.shHW * 1.12 : 0;
+  const longSpread = ['long', 'wavy', 'hime', 'curls', 'dreads'].includes(p.hairBack) ? geo.shHW * 1.12 : 0;
   const hemHalf = p.top === 'dress' ? hipHW * 1.12 + u * 0.16 + 4 : hipHW * 1.1 + u * 0.11 + 4;
   const bodyHalf = Math.max(geo.shHW + armR * 2 + armLen * Math.sin(geo.armAngle) + 4, hemHalf);
   geo.halfW = Math.max(hairHalf, longSpread, bodyHalf, p.headAcc === 'bunny' ? hw * 1.3 : 0);

@@ -165,7 +165,7 @@ const foldColor = (c: string): string => mix(shade(c, 1.4), '#7a5a86', 0.28);
 /** One blurred group (a single filter pass for all its strokes). */
 const soft = (ctx: Ctx, inner: string): string => (inner ? group(inner, { filter: `url(#${ctx.soft})` }) : '');
 
-const LONG_HAIR = ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid', 'hime', 'drills', 'bob'];
+const LONG_HAIR = ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid', 'hime', 'drills', 'bob', 'curls', 'dreads'];
 
 /**
  * Painted shading for the upper body of a garment: light and shadow side, soft folds from the

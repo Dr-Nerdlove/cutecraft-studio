@@ -16,6 +16,8 @@ export function renderAnime(p: AnimeParams, prefix: string, view: ViewKind = 'fu
   const { g } = ctx;
   // one shared soft blur (local figure units) used by the shading of every shape
   const blur = (g.lw * 2.2).toFixed(2);
+  // the front hair is drawn first so that the clothes can take its outline for the hair shadow
+  const hairFront = hairFrontSvg(ctx);
   const figure =
     `<defs><filter id="${ctx.soft}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${blur}"/></filter></defs>` +
     groundShadowSvg(ctx) +
@@ -40,7 +42,7 @@ export function renderAnime(p: AnimeParams, prefix: string, view: ViewKind = 'fu
     eyesSvg(ctx) +
     browsSvg(ctx) +
     headBehindSvg(ctx) +
-    hairFrontSvg(ctx) +
+    hairFront +
     headFrontSvg(ctx) +
     glassesSvg(ctx);
 

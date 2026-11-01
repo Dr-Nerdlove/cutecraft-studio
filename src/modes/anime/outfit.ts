@@ -3,7 +3,7 @@ import {
   C, L, M, Q, ellipse, group, heartPath, lerp, path, smoothOpen, type Pt,
 } from '../../core/svg';
 import { SH_F, armPoint, armSlice, edgeDown, edgeUp, legAt, shoulderAt, shoulderGeo } from './body';
-import { cel, flat, stroke, type Ctx } from './context';
+import { cel, flat, softLine, stroke, type Ctx } from './context';
 import { torsoHW, type Geo } from './geometry';
 import { hairCastShadow } from './hair';
 
@@ -379,6 +379,35 @@ function sleeveShade(ctx: Ctx, side: -1 | 1, c: string, f1: number, elbow: boole
   return lightSide(ctx, c) + soft(ctx, dark) + soft(ctx, light);
 }
 
+/**
+ * A sleeve with its cap set softly into the top: the outline fades out over the inner part of the cap
+ * (towards the chest), so it no longer reads as a seam or a shoulder pad. The outer shoulder edge and the
+ * rest of the sleeve keep their outline.
+ */
+function sleeveCel(ctx: Ctx, side: -1 | 1, d: string, c: string, o: { dx: number; dy: number; inside: string }): string {
+  const { g } = ctx;
+  const r = g.armR;
+  const mode = (globalThis as { __sleeve?: string }).__sleeve ?? 'fade';
+  if (mode === 'old') return cel(ctx, d, c, o);
+  const cap = armPoint(g, side, SH_F, 0);
+  // centre of the fade: on the inner side of the cap top, towards the chest
+  const cx = cap.x - side * r * 0.75, cy = cap.y + r * 0.05;
+  const id = ctx.uid('scg');
+  const mk = ctx.uid('scm');
+  const line = softLine(c);
+  const R = r * (mode === 'wide' ? 2.1 : 1.6);
+  const mask =
+    `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${R.toFixed(1)}">` +
+    `<stop offset="0.45" stop-color="#000"/><stop offset="1" stop-color="#fff"/></radialGradient>` +
+    `<mask id="${mk}" maskUnits="userSpaceOnUse" x="${(cx - R * 3).toFixed(1)}" y="${(cy - R * 3).toFixed(1)}" width="${(R * 6).toFixed(1)}" height="${(R * 6).toFixed(1)}">` +
+    `<rect x="${(cx - R * 3).toFixed(1)}" y="${(cy - R * 3).toFixed(1)}" width="${(R * 6).toFixed(1)}" height="${(R * 6).toFixed(1)}" fill="url(#${id})"/></mask>`;
+  return (
+    mask +
+    cel(ctx, d, c, { ...o, line: null }) +
+    path(d, { fill: 'none', stroke: line, 'stroke-width': g.lw, 'stroke-opacity': 0.55, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', mask: `url(#${mk})` })
+  );
+}
+
 export function sleevesSvg(ctx: Ctx): string {
   const { g, p } = ctx;
   const c = p.topColor;
@@ -387,21 +416,21 @@ export function sleevesSvg(ctx: Ctx): string {
   for (const side of [-1, 1] as const) {
     switch (p.top) {
       case 'tshirt':
-        out += cel(ctx, armSlice(ctx, side, SH_F, 0.36, RG, r * 0.14, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.36, false) });
+        out += sleeveCel(ctx, side, armSlice(ctx, side, SH_F, 0.36, RG, r * 0.14, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.36, false) });
         break;
       case 'sailor': {
-        out += cel(ctx, armSlice(ctx, side, SH_F, 0.36, RG, r * 0.14, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.36, false) });
+        out += sleeveCel(ctx, side, armSlice(ctx, side, SH_F, 0.36, RG, r * 0.14, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.36, false) });
         const collar = luminance(c) > 0.62 ? mix(c, '#3a4a8a', 0.72) : lighten(c, 0.5);
         out += flat(ctx, armSlice(ctx, side, 0.29, 0.36, RG, r * 0.14), collar, { lineW: g.lw * 0.8 });
         break;
       }
       case 'dress':
-        out += cel(ctx, armSlice(ctx, side, SH_F, 0.27, RG, r * 0.3, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.27, false) });
+        out += sleeveCel(ctx, side, armSlice(ctx, side, SH_F, 0.27, RG, r * 0.3, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.27, false) });
         out += flat(ctx, armSlice(ctx, side, 0.23, 0.28, RG, r * 0.3), shade(c, 0.8), { lineW: g.lw * 0.8 });
         break;
       case 'hoodie':
       case 'sweater': {
-        out += cel(ctx, armSlice(ctx, side, SH_F, 0.93, RG, r * 0.2, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.93, true) });
+        out += sleeveCel(ctx, side, armSlice(ctx, side, SH_F, 0.93, RG, r * 0.2, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.93, true) });
         out += cel(ctx, armSlice(ctx, side, 0.86, 0.96, RG, r * 0.1), shade(c, 0.7), { dx: -g.lw * 0.8, dy: -g.lw * 0.2 });
         break;
       }

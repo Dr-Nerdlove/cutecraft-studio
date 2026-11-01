@@ -502,6 +502,36 @@ function backMass(ctx: Ctx): BackMass {
   return { d, yEnd, left, right, tips, half, mid };
 }
 
+/** Outline of the front hair (side locks) per figure, filled in by `hairFrontSvg` for `hairCastShadow`. */
+const frontShapes = new WeakMap<Ctx, string>();
+
+/**
+ * Soft shadow the hair casts on the clothes (to be drawn inside the clipped, blurred shade group of a
+ * garment): the real outline of the hair that lies over the shoulders, moved a little down. Needs
+ * `hairFrontSvg` to have run first for this figure.
+ */
+export function hairCastShadow(ctx: Ctx, color: string, opacity: number): string {
+  const { g, p } = ctx;
+  const down = `translate(0 ${(g.u * 0.045).toFixed(2)})`;
+  const lines = (left: Pt[], right: Pt[]): string =>
+    [left, right].map((l) => path(smoothOpen(l, 1 / 6, true), { fill: 'none', stroke: color, 'stroke-width': g.u * 0.16, opacity, transform: down })).join('');
+  if (p.hairBack === 'afro') return '';
+  if (p.hairBack === 'curls') {
+    const sides = curlSides(ctx, curlEnd(ctx), g.hw * 0.16);
+    const half = Math.floor(sides.length / 2);
+    const keep = (l: Pt[]): Pt[] => l.filter((q) => q.y > g.yShoulder - g.u * 0.3);
+    return lines(keep(sides.slice(0, half)), keep(sides.slice(half + 1).reverse()));
+  }
+  if (p.hairBack === 'dreads') {
+    const y0 = metrics(ctx).yc, y1 = hairEnd(ctx);
+    const left: Pt[] = [{ x: -g.hw * 1.3, y: y0 }, { x: -g.hw * 1.36, y: lerp(y0, y1, 0.5) }, { x: -g.hw * 1.42, y: y1 }];
+    return lines(left, left.map((q) => ({ x: -q.x, y: q.y })));
+  }
+  const d = frontShapes.get(ctx);
+  // the stroke spreads the shadow to the sides of the locks; the offset moves it down
+  return d ? path(d, { fill: color, stroke: color, 'stroke-width': g.u * 0.12, 'stroke-linejoin': 'round', opacity, transform: down }) : '';
+}
+
 /** Outline of a hanging tail and its lock tips (used for strands and loose hairs). */
 function tailGeo(ctx: Ctx, side: 1 | -1, tie: Pt, endY: number, sway: number): { d: string; tips: Pt[] } {
   const { g } = ctx;
@@ -1161,6 +1191,8 @@ export function hairFrontSvg(ctx: Ctx): string {
       parts[1].innerDown + parts[1].outerUp +
       smoothOpen(arcR, 1 / 6, false) + 'Z';
   }
+
+  frontShapes.set(ctx, d);
 
   // texture strands from the crown to the tips (dark lines with a light twin beside them)
   let strands = '';

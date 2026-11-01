@@ -5,6 +5,7 @@ import {
 import { SH_F, armPoint, armSlice, edgeDown, edgeUp, legAt, shoulderAt, shoulderGeo } from './body';
 import { cel, flat, stroke, type Ctx } from './context';
 import { torsoHW, type Geo } from './geometry';
+import { hairCastShadow } from './hair';
 
 const waistY = (g: Geo): number => g.yShoulder + g.torsoLen * 0.62;
 
@@ -165,7 +166,6 @@ const foldColor = (c: string): string => mix(shade(c, 1.4), '#7a5a86', 0.28);
 /** One blurred group (a single filter pass for all its strokes). */
 const soft = (ctx: Ctx, inner: string): string => (inner ? group(inner, { filter: `url(#${ctx.soft})` }) : '');
 
-const LONG_HAIR = ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid', 'hime', 'drills', 'bob', 'curls', 'dreads'];
 
 /**
  * Painted shading for the upper body of a garment: light and shadow side, soft folds from the
@@ -173,7 +173,7 @@ const LONG_HAIR = ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid',
  * `neckD` is the neckline curve (shadow along it); everything is meant to be clipped by `cel`.
  */
 function fabricShade(ctx: Ctx, c: string, o: { neckD?: string; waist?: boolean } = {}): string {
-  const { g, p } = ctx;
+  const { g } = ctx;
   const T = g.torsoLen, yS = g.yShoulder;
   const sL = shoulderGeo(g, -1, RG, 0);
   const cx = Math.abs(sL.ctr.x), cy = sL.ctr.y, R = sL.R;
@@ -193,12 +193,9 @@ function fabricShade(ctx: Ctx, c: string, o: { neckD?: string; waist?: boolean }
       const wy = waistY(g), wh = g.waistHW;
       dark += stroke(ctx, `${M(s * wh * 0.96, wy - T * 0.03)}${Q(s * wh * 0.62, wy + T * 0.01, s * wh * 0.28, wy + T * 0.015)}`, dk, W * 1.2, { opacity: 0.42 });
     }
-    // the shoulder under the hair is in the shade
-    const sh = shoulderGeo(g, s, RG, 0);
-    const a0 = shoulderAt(sh, 0.12), a1 = shoulderAt(sh, 0.55), a2 = shoulderAt(sh, 0.95);
-    const hairK = LONG_HAIR.includes(p.hairBack as string) ? 1 : 0.5;
-    dark += stroke(ctx, `${M(a0.x, a0.y + g.u * 0.05)}${Q(a1.x, a1.y + g.u * 0.07, a2.x, a2.y + g.u * 0.07)}`, dk, g.u * 0.12, { opacity: 0.42 * hairK });
   }
+  // the hair lying over the shoulders shades the cloth along its real outline
+  dark += hairCastShadow(ctx, dk, 0.6);
   // highlights on the lit (left) side
   light += stroke(ctx, `${M(-cx * 0.5, yS + T * 0.11)}${Q(-cx * 0.8, yS + T * 0.17, -cx * 0.9, yS + T * 0.32)}`, lt, W * 1.5, { opacity: 0.6 });
   light += stroke(ctx, `${M(-cx * 0.62, yS + T * 0.42)}${Q(-cx * 0.66, yS + T * 0.52, -g.waistHW * 0.9, yS + T * 0.6)}`, lt, W * 1.2, { opacity: 0.45 });

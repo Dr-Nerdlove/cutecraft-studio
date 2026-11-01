@@ -6,6 +6,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Changed
 
+- The "window light" background now shows the window frame and panes around the head in the portrait view (still soft and blurry).
 - The sleeves are set softly into the top: the outline of the rounded sleeve cap fades out towards the chest, so it no longer looks like a seam or a shoulder pad (all tops).
 - The shadow of the hair on the clothes now follows the real edge of the hair (long, wavy, curly and dreadlocks) instead of the shoulder line. Short hair casts no shoulder shadow any more.
 - The older hairstyles now match the soft painted look: "short and messy" has soft, curved locks instead of hard cartoon spikes, drill curls are smooth glossy spirals, and the buns and the braid got soft shading (the braid now grows out of three strands of hair that go into the first link at about ear height; it is full width from the start and narrows towards the end), fine strands and the warm light edge like the rest of the hair.

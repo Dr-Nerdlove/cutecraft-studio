@@ -144,13 +144,14 @@ function windowSvg(ctx: Ctx): string {
   const wallLit = mix(bg, '#fff0dc', 0.5);
   const wallDim = darken(mix(bg, '#8a6a70', 0.45), 0.05);
   const floorCol = darken(mix(bg, '#b98a62', 0.6), 0.04);
-  const frame = darken(mix(bg, '#d8c0a8', 0.55), 0.08);
-  // Tall window sized from the whole picture (head height to chest height in the full view); in the
-  // portrait view only its right part shows behind the head.
-  const ww = Math.max(box.w * 0.42, VIEW_W * 0.2);
-  const wh = Math.max(ww * 1.45, VIEW_H * 0.33);
-  const wx = box.x - ww * 0.55;
-  const wy = box.y + box.h * 0.05;
+  const frame = darken(mix(bg, '#d8c0a8', 0.55), 0.2);
+  // Window sized from the portrait picture: its frame and panes show on both sides of the head
+  // (the head hides the middle), still soft because the whole window is blurred.
+  const ww = box.w * 1.3;
+  const wh = box.h * 0.92;
+  const wx = box.x + box.w * 0.5 - ww * 0.58;
+  const wy = box.y + box.h * 0.02;
+  const cols = 2, rows = 3;
   const defs =
     `<defs><linearGradient id="${wall}" x1="0" y1="0" x2="1" y2="0.6"><stop offset="0" stop-color="${wallLit}"/><stop offset="1" stop-color="${wallDim}"/></linearGradient>` +
     `<linearGradient id="${corner}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a2438" stop-opacity="0"/><stop offset="1" stop-color="#3a2438" stop-opacity="0.5"/></linearGradient>` +
@@ -166,11 +167,11 @@ function windowSvg(ctx: Ctx): string {
   let soft = '';
   // Window: bright panes with a frame and cross bars.
   soft += `<rect x="${wx}" y="${wy}" width="${ww}" height="${wh}" rx="4" fill="${frame}"/>`;
-  const pad = ww * 0.07;
-  const pw = (ww - pad * 3) / 2;
-  const ph = (wh - pad * 3) / 2;
-  for (let r = 0; r < 2; r++) {
-    for (let c = 0; c < 2; c++) {
+  const pad = ww * 0.04;
+  const pw = (ww - pad * (cols + 1)) / cols;
+  const ph = (wh - pad * (rows + 1)) / rows;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       soft += `<rect x="${(wx + pad + c * (pw + pad)).toFixed(1)}" y="${(wy + pad + r * (ph + pad)).toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" fill="${r === 0 ? '#fffaf0' : '#fff0d8'}"/>`;
     }
   }

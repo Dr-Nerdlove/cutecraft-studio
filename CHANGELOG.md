@@ -6,6 +6,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Changed
 
+- The "window light" background now shows the window frame and panes around the head in the portrait view (still soft and blurry).
 - The older hairstyles now match the soft painted look: "short and messy" has soft, curved locks instead of hard cartoon spikes, drill curls are smooth glossy spirals, and the buns and the braid got soft shading (the braid now grows out of three strands of hair that go into the first link at about ear height; it is full width from the start and narrows towards the end), fine strands and the warm light edge like the rest of the hair.
 - Wavy hair now really looks wavy: soft S-waves in the outline and in the strands.
 - The face shape no longer changes the body: shoulders and neck stay the same for round, oval, heart and square faces.

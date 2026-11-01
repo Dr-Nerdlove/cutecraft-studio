@@ -144,16 +144,14 @@ function windowSvg(ctx: Ctx): string {
   const wallLit = mix(bg, '#fff0dc', 0.5);
   const wallDim = darken(mix(bg, '#8a6a70', 0.45), 0.05);
   const floorCol = darken(mix(bg, '#b98a62', 0.6), 0.04);
-  const frame = darken(mix(bg, '#d8c0a8', 0.55), (globalThis as { __win?: string }).__win === 'old' ? 0.08 : 0.2);
+  const frame = darken(mix(bg, '#d8c0a8', 0.55), 0.2);
   // Window sized from the portrait picture: its frame and panes show on both sides of the head
   // (the head hides the middle), still soft because the whole window is blurred.
-  const mode = (globalThis as { __win?: string }).__win ?? 'A';
-  const old = mode === 'old';
-  const ww = old ? Math.max(box.w * 0.42, VIEW_W * 0.2) : box.w * (mode === 'B' ? 1.0 : 1.3);
-  const wh = old ? Math.max(ww * 1.45, VIEW_H * 0.33) : box.h * 0.92;
-  const wx = old ? box.x - ww * 0.55 : mode === 'B' ? box.x - box.w * 0.12 : box.x + box.w * 0.5 - ww * 0.58;
-  const wy = old ? box.y + box.h * 0.05 : box.y + box.h * 0.02;
-  const cols = old ? 2 : 2, rows = old ? 2 : 3;
+  const ww = box.w * 1.3;
+  const wh = box.h * 0.92;
+  const wx = box.x + box.w * 0.5 - ww * 0.58;
+  const wy = box.y + box.h * 0.02;
+  const cols = 2, rows = 3;
   const defs =
     `<defs><linearGradient id="${wall}" x1="0" y1="0" x2="1" y2="0.6"><stop offset="0" stop-color="${wallLit}"/><stop offset="1" stop-color="${wallDim}"/></linearGradient>` +
     `<linearGradient id="${corner}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a2438" stop-opacity="0"/><stop offset="1" stop-color="#3a2438" stop-opacity="0.5"/></linearGradient>` +
@@ -169,7 +167,7 @@ function windowSvg(ctx: Ctx): string {
   let soft = '';
   // Window: bright panes with a frame and cross bars.
   soft += `<rect x="${wx}" y="${wy}" width="${ww}" height="${wh}" rx="4" fill="${frame}"/>`;
-  const pad = ww * (old ? 0.07 : 0.04);
+  const pad = ww * 0.04;
   const pw = (ww - pad * (cols + 1)) / cols;
   const ph = (wh - pad * (rows + 1)) / rows;
   for (let r = 0; r < rows; r++) {

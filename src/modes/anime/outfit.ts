@@ -387,15 +387,13 @@ function sleeveShade(ctx: Ctx, side: -1 | 1, c: string, f1: number, elbow: boole
 function sleeveCel(ctx: Ctx, side: -1 | 1, d: string, c: string, o: { dx: number; dy: number; inside: string }): string {
   const { g } = ctx;
   const r = g.armR;
-  const mode = (globalThis as { __sleeve?: string }).__sleeve ?? 'fade';
-  if (mode === 'old') return cel(ctx, d, c, o);
   const cap = armPoint(g, side, SH_F, 0);
   // centre of the fade: on the inner side of the cap top, towards the chest
   const cx = cap.x - side * r * 0.75, cy = cap.y + r * 0.05;
   const id = ctx.uid('scg');
   const mk = ctx.uid('scm');
   const line = softLine(c);
-  const R = r * (mode === 'wide' ? 2.1 : 1.6);
+  const R = r * 1.6;
   const mask =
     `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${R.toFixed(1)}">` +
     `<stop offset="0.45" stop-color="#000"/><stop offset="1" stop-color="#fff"/></radialGradient>` +

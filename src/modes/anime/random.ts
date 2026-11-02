@@ -1,5 +1,5 @@
 import { hexToHsl } from '../../core/color';
-import { ACCESSORY_COLORS, BG_COLORS, BLUSH_COLORS, BROW_COLORS, CLOTHES_COLORS, HAIR_COLORS, IRIS_COLORS, SHOE_COLORS, SKIN_TONES } from './palette';
+import { ACCESSORY_COLORS, BG_COLORS, BLUSH_COLORS, FRAME_COLORS, LENS_COLORS, BROW_COLORS, CLOTHES_COLORS, HAIR_COLORS, IRIS_COLORS, SHOE_COLORS, SKIN_TONES } from './palette';
 import type { AnimeParams } from './schema';
 
 const rnd = (a: number, b: number): number => Math.round(a + Math.random() * (b - a));
@@ -98,7 +98,12 @@ export function randomAnime(): AnimeParams {
     shoeColor: chance(0.5) ? pick(['#ffffff', '#3a2f3a', '#7a4a3a']) : nearHue(SHOE_COLORS, baseHue + 30),
     headAcc: weighted([['none', 1.3], ['bow', 2], ['cat', 1.2], ['bunny', 1], ['flower', 1.2], ['crown', 0.8], ['beret', 1]] as const),
     headAccColor: accent,
-    glasses: weighted([['none', 6], ['round', 1], ['heart', 0.7]] as const),
+    glasses: weighted([
+      ['none', 8], ['round', 1], ['thin', 0.8], ['square', 0.8], ['cateye', 0.7], ['heart', 0.6],
+      ['sunRound', 0.5], ['aviator', 0.4], ['sunHeart', 0.5], ['sunStar', 0.3],
+    ] as const),
+    glassesColor: chance(0.5) ? pick(['#6b5876', '#2b2530', '#d4a64a']) : pick(FRAME_COLORS),
+    lensColor: pick(LENS_COLORS),
     bgColor: nearHue(BG_COLORS, baseHue + 180 + rnd(-40, 40)),
     bgPattern: weighted([['plain', 1], ['dots', 1.4], ['hearts', 1.8], ['stars', 1.4], ['gradient', 1.4]] as const),
   };

@@ -4,8 +4,14 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ## Unreleased
 
+### Added
+
+- More glasses: thin wire, square and cat-eye frames, plus sunglasses (round, aviators, heart and star). The frame colour can be chosen for all glasses, the lens colour for sunglasses.
+
 ### Changed
 
+- The heart face shape is fuller: the cheeks and jaw are less narrow, so the face no longer looks thin.
+- Cat eyes are tilted less, so they look more horizontal.
 - The "window light" background now shows the window frame and panes around the head in the portrait view (still soft and blurry).
 - The sleeves are set softly into the top: the outline of the rounded sleeve cap fades out towards the chest, so it no longer looks like a seam or a shoulder pad (all tops).
 - The shadow of the hair on the clothes now follows the real edge of the hair (long, wavy, curly and dreadlocks) instead of the shoulder line. Short hair casts no shoulder shadow any more.

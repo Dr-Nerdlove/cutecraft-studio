@@ -448,6 +448,15 @@ button {
 }
 
 /* slider */
+.range-wrap {
+  touch-action: pan-y;
+  cursor: pointer;
+}
+
+.range-wrap .range {
+  pointer-events: none;
+}
+
 .range {
   --fill: 50%;
   -webkit-appearance: none;

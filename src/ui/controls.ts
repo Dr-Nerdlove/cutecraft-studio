@@ -44,7 +44,65 @@ function sliderRow(def: SliderParam, store: Store): Row {
     store.set(def.key, Number(input.value), true);
   });
   input.addEventListener('change', () => store.commit());
-  el.append(head, input);
+  // The native slider grabs every touch, so swiping up or down over it on a phone moved the value
+  // instead of scrolling. The input itself ignores the pointer (keyboard still works); this wrapper lets
+  // the browser scroll vertically (touch-action: pan-y) and only moves the value on a sideways drag or a tap.
+  const wrap = h('div', 'range-wrap');
+  wrap.appendChild(input);
+  let pointer: { id: number; x: number; y: number; dragging: boolean } | null = null;
+  const setFromX = (clientX: number): void => {
+    const r = input.getBoundingClientRect();
+    const thumb = 28;
+    const f = Math.min(1, Math.max(0, (clientX - r.left - thumb / 2) / Math.max(1, r.width - thumb)));
+    const raw = def.min + f * (def.max - def.min);
+    const v = Math.min(def.max, Math.max(def.min, def.min + Math.round((raw - def.min) / def.step) * def.step));
+    if (Number(input.value) === v) return;
+    input.value = String(v);
+    paint();
+    store.set(def.key, v, true);
+  };
+  const startDrag = (e: PointerEvent): void => {
+    if (!pointer) return;
+    pointer.dragging = true;
+    wrap.setPointerCapture(e.pointerId);
+    input.focus({ preventScroll: true });
+    setFromX(e.clientX);
+  };
+  wrap.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || pointer) return;
+    pointer = { id: e.pointerId, x: e.clientX, y: e.clientY, dragging: false };
+    if (e.pointerType === 'mouse') {
+      e.preventDefault();
+      startDrag(e);
+    }
+  });
+  wrap.addEventListener('pointermove', (e) => {
+    if (!pointer || e.pointerId !== pointer.id) return;
+    if (pointer.dragging) {
+      setFromX(e.clientX);
+      return;
+    }
+    const dx = Math.abs(e.clientX - pointer.x);
+    const dy = Math.abs(e.clientY - pointer.y);
+    if (dx > 8 && dx > dy) startDrag(e);
+    else if (dy > 8) pointer = null; // a vertical swipe: leave it to the page scroll
+  });
+  wrap.addEventListener('pointerup', (e) => {
+    if (!pointer || e.pointerId !== pointer.id) return;
+    if (!pointer.dragging) {
+      input.focus({ preventScroll: true });
+      setFromX(e.clientX); // a plain tap jumps to that spot, like the native slider
+    }
+    pointer = null;
+    store.commit();
+  });
+  wrap.addEventListener('pointercancel', (e) => {
+    if (!pointer || e.pointerId !== pointer.id) return;
+    const wasDragging = pointer.dragging;
+    pointer = null;
+    if (wasDragging) store.commit();
+  });
+  el.append(head, wrap);
   if (def.minLabelKey || def.maxLabelKey) {
     const ends = h('div', 'range-ends');
     ends.append(h('span', '', def.minLabelKey ? t(def.minLabelKey) : ''), h('span', '', def.maxLabelKey ? t(def.maxLabelKey) : ''));

@@ -197,7 +197,7 @@ missing, with a recommendation, and let the people choose.
   (3) Figure geometry is computed once in `src/modes/anime/geometry.ts`; positions of hair, clothes and
   accessories derive from it. New parts must derive from it too, and the extents estimate there (`topExtra`,
   `halfW`) must be updated so the figure stays inside the picture.
-- **Repository:** licence GPL-3.0 (`LICENSE`). Version scheme `vMAJOR.MINOR.PATCH`. `.gitignore` and
+- **Repository:** licence AGPL-3.0 (`LICENSE`). Version scheme `vMAJOR.MINOR.PATCH`. `.gitignore` and
   `CHANGELOG.md` exist. CI: `.github/workflows/pages.yml` runs `npm ci` + `npm run build` on every push and
   pull request; merge only when it passes.
 - **Limits of the environment:** cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP tools.

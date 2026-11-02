@@ -123,7 +123,7 @@ export function computeGeo(p: AnimeParams): Geo {
   // top of the afro cloud above the skull top, in head heights
   const afroTopU = afro ? (afro.rx * AFRO_BUMP - afro.cy) / u : 0;
   // head accessories and the ahoge sit on top of voluminous hair (in head heights above the skull top)
-  const lift = afro ? 0.14 : p.hairBack === 'curls' ? 0.14 : p.hairBack === 'dreads' ? 0.09 : 0;
+  const lift = afro ? 0.14 : p.hairBack === 'curls' ? 0.14 : p.hairBack === 'dreads' ? 0.15 : 0;
   geo.accLift = u * lift;
   const topU =
     Math.max(
@@ -133,7 +133,7 @@ export function computeGeo(p: AnimeParams): Geo {
       p.hairBack === 'messy' ? 0.14 : 0,
       afro ? afroTopU + (p.ahoge ? 0.3 : 0) : 0,
       p.hairBack === 'pixie' ? 0.17 : 0,
-      p.hairBack === 'dreads' ? 0.1 : 0,
+      p.hairBack === 'dreads' ? 0.2 : 0,
       p.hairBack === 'curls' ? 0.2 : 0,
       p.hairFront === 'spiky' ? 0.12 : 0,
       ({ none: 0, bow: 0.12, cat: 0.3, bunny: 0.62, flower: 0.1, crown: 0.22, beret: 0.3 }[p.headAcc]) + lift,

@@ -12,6 +12,8 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Changed
 
+- Long hair: the two side locks now fall straight down beside the face instead of bending at the cheek, and no stray hair strand crosses the ear any more.
+- Dreadlocks: the hairline sits higher (a longer-looking face) and the locks pile up higher on the head for more volume.
 - Doe eyes ("Rehaugen") are rounder: a taller opening, a fuller lower lid and a slightly larger iris.
 - Happy (closed) eyes no longer show lashes. The "light" lashes are now called "natural". Full lashes no longer add lower lashes by themselves: switch on "lower lashes" instead.
 - The heart face shape is fuller: the cheeks and jaw are less narrow, so the face no longer looks thin.

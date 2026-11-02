@@ -1068,7 +1068,7 @@ function sideLock(ctx: Ctx): LockSpec {
   }
   ty = Math.min(ty, -16);
   const t = (ty - g.yTop) / g.u;
-  const tx = t <= 1 ? faceHalfWidthAt(g, p.faceShape, ty) - hw * 0.02 : hw * lerp(0.72, 0.6, clamp((t - 1) / 1.2, 0, 1));
+  const tx = t <= 1 ? faceHalfWidthAt(g, p.faceShape, ty) - hw * 0.02 : hw * lerp(0.9, 0.78, clamp((t - 1) / 1.2, 0, 1));
   return { tipX: tx, tipY: ty, flick: p.hairBack === 'wavy' ? hw * 0.2 : 0 };
 }
 
@@ -1099,12 +1099,15 @@ export function hairFrontSvg(ctx: Ctx): string {
   const ty = lock.tipY;
   const dyL = ty - A.y;
 
+  // when the lock hangs far below the chin, its outer edge leaves the narrowing face early and falls
+  // straight to the tip (no sharp bend at the cheek)
+  const below = clamp((ty - g.yChin) / (u * 1.2), 0, 1);
   const sidePath = (s: 1 | -1): { down: string; up: string } => {
     // outer edge goes from the temple down to the tip, the inner edge returns to the bangs
     const tipPt: Pt = { x: s * (sx + lock.flick), y: ty };
     const edge = (y: number): number => faceHalfWidthAt(g, p.faceShape, Math.min(y, g.yChin - u * 0.02));
     const o1: Pt = { x: s * (edge(A.y + dyL * 0.35) + hw * 0.1), y: A.y + dyL * 0.4 };
-    const o2: Pt = { x: s * (edge(A.y + dyL * 0.8) + hw * 0.06 + lock.flick * 0.4), y: A.y + dyL * 0.82 };
+    const o2: Pt = { x: s * (lerp(edge(A.y + dyL * 0.8) + hw * 0.06, sx + hw * 0.08, below) + lock.flick * 0.4), y: A.y + dyL * 0.82 };
     const i1: Pt = { x: s * (sx - hw * 0.1 + lock.flick), y: ty - dyL * 0.18 };
     const i2: Pt = { x: s * hw * 0.93, y: A.y + dyL * 0.38 };
     const j: Pt = { x: s * Math.abs(s === -1 ? jl.x : jr.x), y: s === -1 ? jl.y : jr.y };
@@ -1128,7 +1131,7 @@ export function hairFrontSvg(ctx: Ctx): string {
     const dy = ty - A.y;
     const edge = (y: number): number => faceHalfWidthAt(g, p.faceShape, Math.min(y, g.yChin - u * 0.02));
     const o1: Pt = { x: edge(A.y + dy * 0.35) + hw * 0.1, y: A.y + dy * 0.4 };
-    const o2: Pt = { x: edge(A.y + dy * 0.8) + hw * 0.06 + lock.flick * 0.4, y: A.y + dy * 0.82 };
+    const o2: Pt = { x: lerp(edge(A.y + dy * 0.8) + hw * 0.06, sx + hw * 0.08, below) + lock.flick * 0.4, y: A.y + dy * 0.82 };
     return C(o2.x, o2.y, o1.x, o1.y, m.rx, m.yc);
   })();
 
@@ -1388,11 +1391,12 @@ function flyaways(ctx: Ctx, m: HairMetrics, lockEnd: number): string {
     const x = (f: number): number => s * hw * f;
     // lifting off the crown
     out += stroke(ctx, `${M(x(0.35), g.yTop + u * 0.0)}${Q(x(0.6), g.yTop - u * 0.035, x(0.82), g.yTop + u * 0.03)}`, col, w, { opacity: 0.7 });
-    // off the temples
-    out += stroke(ctx, `${M(s * m.rx * 0.98, m.yc)}${C(x(1.2), m.yc + u * 0.12, x(1.08), m.yc + u * 0.25, x(1.25), m.yc + u * 0.38)}`, col, w, { opacity: 0.7 });
-    // along the side lock
+    // off the temples: starts above the ear and curls outwards (never across the ear)
+    out += stroke(ctx, `${M(s * m.rx * 0.98, m.yc - u * 0.1)}${C(x(1.18), m.yc - u * 0.08, x(1.1), m.yc + u * 0.04, x(1.22), m.yc + u * 0.08)}`, col, w, { opacity: 0.7 });
+    // along the side lock: starts below the ear
+    const yS = m.yc + u * 0.75;
     const y1 = Math.min(lockEnd, g.yChin + u * 0.3);
-    out += stroke(ctx, `${M(x(1.0), m.yc + u * 0.3)}${C(x(1.18), lerp(m.yc, y1, 0.5), x(0.98), lerp(m.yc, y1, 0.75), x(1.12), y1)}`, col, w * 0.9, { opacity: 0.6 });
+    if (y1 > yS + u * 0.2) out += stroke(ctx, `${M(x(1.0), yS)}${C(x(1.14), lerp(yS, y1, 0.4), x(0.98), lerp(yS, y1, 0.75), x(1.08), y1)}`, col, w * 0.9, { opacity: 0.6 });
   }
   return out;
 }
@@ -2002,7 +2006,7 @@ function dreadsFront(ctx: Ctx, fills: { fill: string; shade: string }, m: HairMe
   const u = g.u, hw = g.hw;
   const opts = { line: ctx.hairLine, shadeColor: fills.shade, dx: -g.lw * 2.2, dy: -g.lw * 1.2 };
   const xs = m.rx * 0.98;
-  const hy = (x: number): number => g.yTop + u * (0.2 + 0.17 * Math.pow(Math.min(1, Math.abs(x) / xs), 2.2));
+  const hy = (x: number): number => g.yTop + u * (0.1 + 0.15 * Math.pow(Math.min(1, Math.abs(x) / xs), 2.2));
   const endY = hairEnd(ctx);
   let out = '';
   // locks falling beside the face: they start at the hairline of the temple (the scalp locks cover their roots)
@@ -2024,7 +2028,9 @@ function dreadsFront(ctx: Ctx, fills: { fill: string; shade: string }, m: HairMe
   out += rings.join('');
   // the scalp: a dark base between the locks, then locks fanning from the hairline towards the crown
   const rxS = m.rx * 1.04;
-  const top = skullArc(g, rxS, m.yc, m.vTop, Math.PI, 0, 14);
+  // dreadlocks pile up on the head: the crown stands well above the bare skull
+  const vTopD = u * 0.2;
+  const top = skullArc(g, rxS, m.yc, vTopD, Math.PI, 0, 14);
   const hairline: Pt[] = [];
   for (let i = 0; i <= 10; i++) {
     const x = lerp(xs, -xs, i / 10);
@@ -2037,7 +2043,7 @@ function dreadsFront(ctx: Ctx, fills: { fill: string; shade: string }, m: HairMe
   );
   out += cel(ctx, base, fills.shade, { ...opts, line: null });
   const roots = [0.06, 0.25, 0.44, 0.63, 0.82];
-  const arc = skullArc(g, rxS * 1.03, m.yc, m.vTop, 0, Math.PI, 40);
+  const arc = skullArc(g, rxS * 1.03, m.yc, vTopD, 0, Math.PI, 40);
   const items: Array<{ s: -1 | 1; r: number; k: number }> = [];
   roots.forEach((r, k) => { items.push({ s: -1, r, k }); items.push({ s: 1, r, k }); });
   // outer locks first, so the ones next to the parting lie on top

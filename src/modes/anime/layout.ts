@@ -14,7 +14,7 @@ export interface FaceLayout {
 }
 
 // Height / width of the eye opening. Semi-realistic eyes are much flatter than classic anime eyes.
-const EYE_ASPECT = { round: 0.74, sparkly: 0.78, sleepy: 0.56, cat: 0.6, almond: 0.58, doe: 0.7, narrow: 0.46, happy: 0.42 } as const;
+const EYE_ASPECT = { round: 0.74, sparkly: 0.78, sleepy: 0.56, cat: 0.6, almond: 0.58, doe: 0.8, narrow: 0.46, happy: 0.42 } as const;
 
 export function faceLayout(ctx: Ctx): FaceLayout {
   const { g, p } = ctx;

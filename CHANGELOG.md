@@ -11,6 +11,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Changed
 
+- Doe eyes ("Rehaugen") are rounder: a taller opening, a fuller lower lid and a slightly larger iris.
 - Happy (closed) eyes no longer show lashes. The "light" lashes are now called "natural". Full lashes no longer add lower lashes by themselves: switch on "lower lashes" instead.
 - The heart face shape is fuller: the cheeks and jaw are less narrow, so the face no longer looks thin.
 - Cat eyes are tilted less, so they look more horizontal.

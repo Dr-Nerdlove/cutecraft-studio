@@ -1,6 +1,6 @@
 import { choice, color, slider, toggle, type Category, type Params } from '../../core/schema';
 import {
-  ACCESSORY_COLORS, BG_COLORS, BLUSH_COLORS, BROW_COLORS, CLOTHES_COLORS, HAIR_COLORS, IRIS_COLORS, SHOE_COLORS, SKIN_TONES,
+  ACCESSORY_COLORS, BG_COLORS, FRAME_COLORS, LENS_COLORS, BLUSH_COLORS, BROW_COLORS, CLOTHES_COLORS, HAIR_COLORS, IRIS_COLORS, SHOE_COLORS, SKIN_TONES,
 } from './palette';
 
 /** Typed view of the anime parameters. The keys here are the saved keys: never rename them. */
@@ -29,7 +29,8 @@ export interface AnimeParams {
   sockColor: string; shoeColor: string;
   headAcc: 'none' | 'bow' | 'cat' | 'bunny' | 'flower' | 'crown' | 'beret';
   headAccColor: string;
-  glasses: 'none' | 'round' | 'heart';
+  glasses: 'none' | 'round' | 'heart' | 'thin' | 'square' | 'cateye' | 'sunRound' | 'aviator' | 'sunHeart' | 'sunStar';
+  glassesColor: string; lensColor: string;
   bgColor: string;
   bgPattern: 'plain' | 'dots' | 'hearts' | 'stars' | 'gradient' | 'bokeh' | 'sunset' | 'window';
 }
@@ -158,8 +159,14 @@ export const animeCategories: readonly Category[] = [
       ], 'bow'),
       color('headAccColor', 'a.headAccColor', ACCESSORY_COLORS, '#ff7aa8', { showIf: (p) => p.headAcc !== 'none' }),
       choice('glasses', 'a.glasses', [
-        { value: 'none', labelKey: 'a.glasses.none' }, { value: 'round', labelKey: 'a.glasses.round' }, { value: 'heart', labelKey: 'a.glasses.heart' },
+        { value: 'none', labelKey: 'a.glasses.none' }, { value: 'round', labelKey: 'a.glasses.round' },
+        { value: 'thin', labelKey: 'a.glasses.thin' }, { value: 'square', labelKey: 'a.glasses.square' },
+        { value: 'cateye', labelKey: 'a.glasses.cateye' }, { value: 'heart', labelKey: 'a.glasses.heart' },
+        { value: 'sunRound', labelKey: 'a.glasses.sunRound' }, { value: 'aviator', labelKey: 'a.glasses.aviator' },
+        { value: 'sunHeart', labelKey: 'a.glasses.sunHeart' }, { value: 'sunStar', labelKey: 'a.glasses.sunStar' },
       ], 'none'),
+      color('glassesColor', 'a.glassesColor', FRAME_COLORS, '#6b5876', { showIf: (p) => p.glasses !== 'none' }),
+      color('lensColor', 'a.lensColor', LENS_COLORS, '#3a3340', { showIf: (p) => String(p.glasses).startsWith('sun') || p.glasses === 'aviator' }),
     ],
   },
   {

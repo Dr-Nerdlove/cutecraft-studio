@@ -27,4 +27,10 @@ export const ACCESSORY_COLORS = [
   '#ff7aa8', '#f9a8c9', '#ffffff', '#d9c7f7', '#8fb8f0', '#8fdcc0', '#fff1a8', '#ffd35a', '#e84a5f', '#3a3f6b',
 ] as const;
 
+/** Glasses frames: plum (the old fixed colour), black, brown, gold, silver, rose, pink, lilac, sky. */
+export const FRAME_COLORS = ['#6b5876', '#2b2530', '#7a4a3a', '#d4a64a', '#b8bcc8', '#e8a0a8', '#ff7aa8', '#b59af0', '#8fb8f0', '#ffffff'] as const;
+
+/** Sunglass lenses: smoke, brown, rose, pink, lilac, blue, mint, amber. */
+export const LENS_COLORS = ['#3a3340', '#6a4632', '#c96a7e', '#ff8fb8', '#9a7ad8', '#4a78c0', '#5ab89a', '#e0a040'] as const;
+
 export const BG_COLORS = ['#ffe3ee', '#e9defa', '#d9f5e8', '#dff0ff', '#fff3d6', '#ffe0cf', '#f6e1f5', '#e5f6ff'] as const;

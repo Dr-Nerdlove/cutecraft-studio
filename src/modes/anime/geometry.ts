@@ -61,7 +61,7 @@ export const VIEW_H = 600;
 export const GROUND_Y = 552;
 
 // Semi-realistic faces: a bit narrower and longer than classic anime faces.
-const FACE_RATIO = { round: 0.9, oval: 0.81, heart: 0.85, square: 0.89 } as const;
+const FACE_RATIO = { round: 0.9, oval: 0.81, heart: 0.88, square: 0.89 } as const;
 
 export function computeGeo(p: AnimeParams): Geo {
   // Normal anime proportions only; the saved `proportion` value is ignored.
@@ -179,7 +179,7 @@ const PROFILES: Record<AnimeParams['faceShape'], Profile> = {
   round: [[0, 0], [0.06, 0.42], [0.14, 0.7], [0.28, 0.93], [0.44, 1], [0.6, 0.97], [0.74, 0.87], [0.86, 0.67], [0.95, 0.37], [1, 0]],
   oval: [[0, 0], [0.06, 0.38], [0.14, 0.64], [0.28, 0.87], [0.44, 0.98], [0.6, 0.94], [0.74, 0.82], [0.86, 0.62], [0.95, 0.33], [1, 0]],
   // wide cheekbones, a jaw that narrows gently and a small, softly rounded chin (no V point)
-  heart: [[0, 0], [0.06, 0.46], [0.14, 0.77], [0.28, 0.98], [0.38, 1], [0.52, 0.93], [0.66, 0.75], [0.78, 0.56], [0.88, 0.4], [0.95, 0.28], [0.985, 0.15], [1, 0]],
+  heart: [[0, 0], [0.06, 0.46], [0.14, 0.77], [0.28, 0.98], [0.38, 1], [0.52, 0.95], [0.66, 0.84], [0.78, 0.68], [0.88, 0.51], [0.95, 0.36], [0.985, 0.2], [1, 0]],
   square: [[0, 0], [0.06, 0.44], [0.14, 0.72], [0.28, 0.94], [0.46, 1], [0.66, 0.97], [0.82, 0.89], [0.93, 0.64], [0.985, 0.33], [1, 0]],
 };
 

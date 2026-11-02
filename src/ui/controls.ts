@@ -1,5 +1,6 @@
 import type { Mode } from '../core/mode';
 import type { Category, ChoiceParam, ColorParam, ParamDef, Params, SliderParam, ToggleParam } from '../core/schema';
+import { hexToHsv, hsvToHex, type HSV } from '../core/color';
 import { t } from '../i18n';
 import type { Store } from './store';
 
@@ -139,20 +140,108 @@ function colorRow(def: ColorParam, store: Store): Row {
     swatches.appendChild(b);
     buttons.push(b);
   }
-  let custom: HTMLInputElement | null = null;
-  let customWrap: HTMLElement | null = null;
+  let customBtn: HTMLButtonElement | null = null;
+  let panel: HTMLElement | null = null;
+  let hsv: HSV = { h: 0, s: 0, v: 1 };
+  let paintPanel: () => void = () => {};
   if (def.allowCustom) {
-    customWrap = h('label', 'swatch custom');
-    customWrap.title = t('ui.colorCustom');
-    custom = h('input', 'custom-input');
-    custom.type = 'color';
-    custom.setAttribute('aria-label', t('ui.colorCustom'));
-    custom.addEventListener('input', () => store.set(def.key, custom!.value, true));
-    custom.addEventListener('change', () => store.commit());
-    customWrap.appendChild(custom);
-    swatches.appendChild(customWrap);
+    customBtn = h('button', 'swatch custom');
+    customBtn.type = 'button';
+    customBtn.title = t('ui.colorCustom');
+    customBtn.setAttribute('aria-label', t('ui.colorCustom'));
+    customBtn.setAttribute('aria-expanded', 'false');
+    swatches.appendChild(customBtn);
+    panel = h('div', 'color-panel');
+    panel.hidden = true;
+    const wheel = h('canvas', 'color-wheel');
+    const SIZE = 180;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    wheel.width = wheel.height = Math.round(SIZE * dpr);
+    wheel.setAttribute('role', 'img');
+    wheel.setAttribute('aria-label', t('ui.colorWheel'));
+    const marker = h('span', 'color-marker');
+    const wheelWrap = h('div', 'color-wheel-wrap');
+    wheelWrap.append(wheel, marker);
+    const vLabel = h('label', 'row-label', t('ui.colorBrightness'));
+    const vId = uid('cv');
+    vLabel.htmlFor = vId;
+    const vInput = h('input', 'range color-brightness');
+    vInput.type = 'range';
+    vInput.id = vId;
+    vInput.min = '5';
+    vInput.max = '100';
+    vInput.step = '1';
+    panel.append(wheelWrap, vLabel, vInput);
+    let drawn = false;
+    const drawWheel = (): void => {
+      const ctx2 = wheel.getContext('2d');
+      if (!ctx2) return;
+      const n = wheel.width, c = n / 2;
+      const img = ctx2.createImageData(n, n);
+      for (let y = 0; y < n; y++) {
+        for (let x = 0; x < n; x++) {
+          const dx = x + 0.5 - c, dy = y + 0.5 - c;
+          const d = Math.hypot(dx, dy) / c;
+          if (d > 1) continue;
+          const hex = hsvToHex({ h: (Math.atan2(dy, dx) * 180) / Math.PI, s: d, v: 1 });
+          const i = (y * n + x) * 4;
+          img.data[i] = parseInt(hex.slice(1, 3), 16);
+          img.data[i + 1] = parseInt(hex.slice(3, 5), 16);
+          img.data[i + 2] = parseInt(hex.slice(5, 7), 16);
+          img.data[i + 3] = d > 0.99 ? Math.round(255 * (1 - (d - 0.99) / 0.01)) : 255;
+        }
+      }
+      ctx2.putImageData(img, 0, 0);
+      drawn = true;
+    };
+    paintPanel = (): void => {
+      if (!drawn) drawWheel();
+      const a = (hsv.h * Math.PI) / 180;
+      marker.style.left = `${50 + Math.cos(a) * hsv.s * 50}%`;
+      marker.style.top = `${50 + Math.sin(a) * hsv.s * 50}%`;
+      marker.style.setProperty('--c', hsvToHex({ ...hsv, v: 1 }));
+      const full = hsvToHex({ ...hsv, v: 1 });
+      vInput.value = String(Math.round(hsv.v * 100));
+      vInput.style.setProperty('--vc', full);
+    };
+    const apply = (live: boolean): void => store.set(def.key, hsvToHex(hsv), live);
+    const fromPointer = (e: PointerEvent): void => {
+      const r = wheel.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      const rad = r.width / 2;
+      hsv = { h: (Math.atan2(dy, dx) * 180) / Math.PI, s: Math.min(1, Math.hypot(dx, dy) / rad), v: hsv.v };
+      paintPanel();
+      apply(true);
+    };
+    let dragging = false;
+    wheelWrap.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      wheelWrap.setPointerCapture(e.pointerId);
+      fromPointer(e);
+    });
+    wheelWrap.addEventListener('pointermove', (e) => { if (dragging) fromPointer(e); });
+    const end = (): void => {
+      if (!dragging) return;
+      dragging = false;
+      store.commit();
+    };
+    wheelWrap.addEventListener('pointerup', end);
+    wheelWrap.addEventListener('pointercancel', end);
+    vInput.addEventListener('input', () => {
+      hsv = { ...hsv, v: Number(vInput.value) / 100 };
+      paintPanel();
+      apply(true);
+    });
+    vInput.addEventListener('change', () => store.commit());
+    customBtn.addEventListener('click', () => {
+      const open = panel!.hidden;
+      panel!.hidden = !open;
+      customBtn!.setAttribute('aria-expanded', String(open));
+      if (open) paintPanel();
+    });
   }
   el.append(head, swatches);
+  if (panel) el.appendChild(panel);
   return {
     el, def,
     sync(params) {
@@ -164,10 +253,12 @@ function colorRow(def: ColorParam, store: Store): Row {
         b.classList.toggle('selected', on);
         b.setAttribute('aria-pressed', String(on));
       }
-      if (custom && customWrap) {
-        custom.value = cur;
-        customWrap.classList.toggle('selected', !inPalette);
-        customWrap.style.setProperty('--c', !inPalette ? cur : 'transparent');
+      if (customBtn) {
+        // keep the hue of a grey / black colour while the wheel is being used
+        if (hsvToHex(hsv).toLowerCase() !== cur) hsv = hexToHsv(cur);
+        customBtn.classList.toggle('selected', !inPalette);
+        customBtn.style.setProperty('--c', !inPalette ? cur : 'transparent');
+        if (panel && !panel.hidden) paintPanel();
       }
     },
   };

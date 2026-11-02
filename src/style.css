@@ -559,6 +559,65 @@ button {
   content: '';
 }
 
+.color-panel {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 0 0 1.5px rgba(120, 90, 160, 0.18);
+}
+
+.color-panel[hidden] {
+  display: none;
+}
+
+.color-panel .row-label {
+  justify-self: start;
+}
+
+.color-panel .color-brightness {
+  width: 100%;
+}
+
+.color-panel .color-brightness::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, #000, var(--vc, #fff));
+}
+
+.color-panel .color-brightness::-moz-range-track {
+  background: linear-gradient(90deg, #000, var(--vc, #fff));
+}
+
+.color-wheel-wrap {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.color-wheel {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(120, 90, 160, 0.25);
+}
+
+.color-marker {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--c, #fff);
+  box-shadow: 0 0 0 1.5px rgba(60, 40, 90, 0.5), 0 2px 5px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
 .custom-input {
   position: absolute;
   inset: 0;

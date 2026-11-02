@@ -6,6 +6,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Added
 
+- Colour wheel: the palette button (🎨) next to every colour row now opens a colour wheel to pick the hue and saturation, plus a brightness slider.
 - More eye options: voluminous lashes, optional lower lashes, eyeliner (a crisp dark line with a longer wing), and earthy or glitter eyeshadow (with a choice of glitter colour). Eyeshadow also works on happy (closed) eyes.
 - More glasses: thin wire, square and cat-eye frames, plus sunglasses (round, aviators, heart and star). The frame colour can be chosen for all glasses, the lens colour for sunglasses.
 

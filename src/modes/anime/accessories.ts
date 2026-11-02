@@ -1,8 +1,9 @@
 import { darken, lighten, mix, outline } from '../../core/color';
-import { C, L, M, Q, circle, ellipse, group, heartPath, path, type Pt } from '../../core/svg';
+import { C, L, M, Q, circle, group, heartPath, path, smoothClosed, type Pt } from '../../core/svg';
 import { cel, flat, stroke, type Ctx } from './context';
 import { bowSvg } from './outfit';
 import { faceLayout } from './layout';
+import type { AnimeParams } from './schema';
 
 function earShape(bx: number, by: number, tx: number, ty: number, w: number): string {
   return (
@@ -86,27 +87,103 @@ export function headFrontSvg(ctx: Ctx): string {
   }
 }
 
+type Lens = { d: string; outer: number; inner: number };
+
+/** Closed smooth outline through points given in lens units (x: + = outer side, y: + = down). */
+function lensFrom(cx: number, cy: number, R: number, s: number, pts: ReadonlyArray<readonly [number, number]>): string {
+  return smoothClosed(pts.map(([x, y]) => ({ x: cx + s * x * R, y: cy + y * R })));
+}
+
+function roundedRect(cx: number, cy: number, hw: number, hh: number, r: number): string {
+  return (
+    M(cx - hw + r, cy - hh) + L(cx + hw - r, cy - hh) + Q(cx + hw, cy - hh, cx + hw, cy - hh + r) +
+    L(cx + hw, cy + hh - r) + Q(cx + hw, cy + hh, cx + hw - r, cy + hh) + L(cx - hw + r, cy + hh) +
+    Q(cx - hw, cy + hh, cx - hw, cy + hh - r) + L(cx - hw, cy - hh + r) + Q(cx - hw, cy - hh, cx - hw + r, cy - hh) + 'Z'
+  );
+}
+
+/** Lens outline for one side (s = -1 left, +1 right); outer/inner = horizontal reach in units of R. */
+function lensShape(kind: Exclude<AnimeParams['glasses'], 'none'>, cx: number, cy: number, R: number, s: number): Lens {
+  switch (kind) {
+    case 'round': case 'sunRound':
+      return { d: ellipsePath(cx, cy, R, R), outer: 1, inner: 1 };
+    case 'thin':
+      return { d: ellipsePath(cx, cy, R * 0.98, R * 0.86), outer: 0.98, inner: 0.98 };
+    case 'square':
+      return { d: roundedRect(cx, cy + R * 0.04, R * 1.04, R * 0.74, R * 0.3), outer: 1.04, inner: 1.04 };
+    case 'cateye':
+      // the outer upper corner sweeps up into a little wing
+      return {
+        d: lensFrom(cx, cy, R, s, [[-0.98, -0.3], [-0.55, -0.66], [0.2, -0.72], [0.82, -0.86], [1.12, -0.82], [1.02, -0.2], [0.72, 0.5], [0.05, 0.7], [-0.68, 0.52]]),
+        outer: 1.1, inner: 0.98,
+      };
+    case 'aviator':
+      // teardrop lens, deepest on the outer side
+      return {
+        d: lensFrom(cx, cy, R, s, [[-0.98, -0.5], [-0.3, -0.72], [0.55, -0.7], [1.04, -0.42], [1.02, 0.2], [0.72, 0.78], [0.12, 0.92], [-0.6, 0.62], [-0.96, 0.08]]),
+        outer: 1.04, inner: 0.98,
+      };
+    case 'heart': case 'sunHeart':
+      return { d: heartPath(cx, cy - R * 0.02, R * 0.98), outer: 1.08, inner: 1.08 };
+    case 'sunStar':
+      return { d: fivePointStar(cx, cy + R * 0.06, R * 1.12, R * 0.62), outer: 1.06, inner: 1.06 };
+  }
+}
+
+function ellipsePath(cx: number, cy: number, rx: number, ry: number): string {
+  return `${M(cx - rx, cy)}A${rx.toFixed(2)} ${ry.toFixed(2)} 0 1 0 ${(cx + rx).toFixed(2)} ${cy.toFixed(2)}A${rx.toFixed(2)} ${ry.toFixed(2)} 0 1 0 ${(cx - rx).toFixed(2)} ${cy.toFixed(2)}Z`;
+}
+
+/** Five-pointed star with softened points. */
+function fivePointStar(cx: number, cy: number, ro: number, ri: number): string {
+  const pts: Pt[] = [];
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const r = i % 2 ? ri : ro;
+    pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+  }
+  return smoothClosed(pts, 1 / 14);
+}
+
 export function glassesSvg(ctx: Ctx): string {
   const { g, p } = ctx;
   if (p.glasses === 'none') return '';
+  const kind = p.glasses;
+  const sun = kind === 'sunRound' || kind === 'aviator' || kind === 'sunHeart' || kind === 'sunStar';
   const lo = faceLayout(ctx);
   const R = Math.max(lo.eyeW * 0.72, lo.eyeH * 0.62);
-  const frame = '#6b5876';
-  const fw = Math.max(g.lw * 1.5, R * 0.1);
-  let out = '';
+  const frame = p.glassesColor;
+  const frameLine = darken(frame, 0.18);
+  const fw = Math.max(g.lw * 1.5, R * 0.1) * (kind === 'thin' || kind === 'aviator' ? 0.55 : 1);
   const cy = lo.eyeY + lo.eyeH * 0.02;
+  let defs = '';
+  let lensFill: Record<string, string | number> = { fill: '#ffffff', 'fill-opacity': 0.16 };
+  if (sun) {
+    // tinted lens, darker at the top like real gradient sunglasses
+    const id = ctx.uid('lens');
+    const lc = p.lensColor;
+    defs = `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${darken(lc, 0.22)}" stop-opacity="0.96"/>` +
+      `<stop offset="1" stop-color="${lighten(lc, 0.12)}" stop-opacity="0.82"/></linearGradient></defs>`;
+    lensFill = { fill: `url(#${id})` };
+  }
+  let out = defs;
+  let inner = 1;
   for (const s of [-1, 1] as const) {
     const cx = s * lo.eyeDX;
-    const shape =
-      p.glasses === 'round'
-        ? ellipse(cx, cy, R, R, { fill: '#ffffff', 'fill-opacity': 0.16, stroke: frame, 'stroke-width': fw })
-        : path(heartPath(cx, cy - R * 0.02, R * 0.98), { fill: '#ffffff', 'fill-opacity': 0.16, stroke: frame, 'stroke-width': fw, 'stroke-linejoin': 'round' });
-    out += shape;
-    out += stroke(ctx, `${M(cx - R * 0.55, cy - R * 0.45)}${Q(cx - R * 0.35, cy - R * 0.7, cx - R * 0.05, cy - R * 0.78)}`, '#ffffff', fw * 0.7, { opacity: 0.7 });
+    const lens = lensShape(kind, cx, cy, R, s);
+    inner = lens.inner;
+    out += path(lens.d, { ...lensFill, stroke: frame, 'stroke-width': fw, 'stroke-linejoin': 'round' });
+    // a thin darker line inside the rim gives the frame some depth
+    if (kind !== 'thin') out += path(lens.d, { fill: 'none', stroke: frameLine, 'stroke-width': fw * 0.25, opacity: 0.5 });
+    // glint
+    out += stroke(ctx, `${M(cx - R * 0.55, cy - R * 0.42)}${Q(cx - R * 0.35, cy - R * 0.66, cx - R * 0.05, cy - R * 0.72)}`, '#ffffff', fw * (sun ? 0.9 : 0.7), { opacity: sun ? 0.55 : 0.7 });
+    if (sun) out += stroke(ctx, `${M(cx + R * 0.2, cy + R * 0.42)}${L(cx + R * 0.42, cy + R * 0.2)}`, '#ffffff', fw * 0.6, { opacity: 0.35 });
     // temple arm
-    out += stroke(ctx, `${M(cx + s * R, cy - R * 0.15)}${L(s * g.hw * 0.99, cy - R * 0.1)}`, frame, fw * 0.85);
+    out += stroke(ctx, `${M(cx + s * R * lens.outer * 0.97, cy - R * 0.15)}${L(s * g.hw * 0.99, cy - R * 0.1)}`, frame, Math.max(fw, g.lw * 1.2) * 0.85);
   }
-  out += stroke(ctx, `${M(-lo.eyeDX + R, cy - R * 0.1)}${Q(0, cy - R * 0.38, lo.eyeDX - R, cy - R * 0.1)}`, frame, fw * 0.9);
+  const bx = lo.eyeDX - R * inner * 0.97;
+  out += stroke(ctx, `${M(-bx, cy - R * 0.1)}${Q(0, cy - R * 0.38, bx, cy - R * 0.1)}`, frame, Math.max(fw, g.lw * 1.2) * 0.9);
+  // aviators get the classic straight top bar
+  if (kind === 'aviator') out += stroke(ctx, `${M(-bx, cy - R * 0.62)}${L(bx, cy - R * 0.62)}`, frame, fw * 0.9);
   return out;
 }
-

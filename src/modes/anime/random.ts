@@ -1,5 +1,5 @@
 import { hexToHsl } from '../../core/color';
-import { ACCESSORY_COLORS, BG_COLORS, BLUSH_COLORS, FRAME_COLORS, LENS_COLORS, BROW_COLORS, CLOTHES_COLORS, HAIR_COLORS, IRIS_COLORS, SHOE_COLORS, SKIN_TONES } from './palette';
+import { ACCESSORY_COLORS, BG_COLORS, GLITTER_COLORS, BLUSH_COLORS, FRAME_COLORS, LENS_COLORS, BROW_COLORS, CLOTHES_COLORS, HAIR_COLORS, IRIS_COLORS, SHOE_COLORS, SKIN_TONES } from './palette';
 import type { AnimeParams } from './schema';
 
 const rnd = (a: number, b: number): number => Math.round(a + Math.random() * (b - a));
@@ -81,7 +81,11 @@ export function randomAnime(): AnimeParams {
     hetero: chance(0.1),
     iris2: pick(IRIS_COLORS),
     shine: weighted([['classic', 4], ['star', 1.3], ['heart', 1]] as const),
-    lashes: weighted([['none', 0.6], ['light', 2], ['full', 2]] as const),
+    lashes: weighted([['none', 0.6], ['light', 2], ['full', 2], ['volume', 1]] as const),
+    lowerLashes: chance(0.35),
+    eyeliner: chance(0.25),
+    eyeshadow: weighted([['none', 3], ['earthy', 1], ['glitter', 0.7]] as const),
+    glitterColor: pick(GLITTER_COLORS),
     hairBack,
     hairFront: pick(['straight', 'side', 'parted', 'curtain', 'blunt', 'swept', 'spiky', 'forehead'] as const),
     hairColor: hair,

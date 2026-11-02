@@ -6,10 +6,12 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Added
 
+- More eye options: voluminous lashes, optional lower lashes, eyeliner (a crisp dark line with a longer wing), and earthy or glitter eyeshadow (with a choice of glitter colour). Eyeshadow also works on happy (closed) eyes.
 - More glasses: thin wire, square and cat-eye frames, plus sunglasses (round, aviators, heart and star). The frame colour can be chosen for all glasses, the lens colour for sunglasses.
 
 ### Changed
 
+- Happy (closed) eyes no longer show lashes. The "light" lashes are now called "natural". Full lashes no longer add lower lashes by themselves: switch on "lower lashes" instead.
 - The heart face shape is fuller: the cheeks and jaw are less narrow, so the face no longer looks thin.
 - Cat eyes are tilted less, so they look more horizontal.
 - The "window light" background now shows the window frame and panes around the head in the portrait view (still soft and blurry).

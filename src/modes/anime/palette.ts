@@ -21,6 +21,8 @@ export const SHOE_COLORS = ['#ffffff', '#f9a8c9', '#3a2f3a', '#7a4a3a', '#c9a27e
 
 export const BLUSH_COLORS = ['#ff9fb2', '#ff8fa3', '#ffb3a7', '#f5a0d0', '#ff7f9f', '#e9a0ff'] as const;
 
+export const GLITTER_COLORS = ['#f3d9a0', '#e8b4a0', '#ff9fc8', '#c9a8f0', '#d8dce8', '#a8d8f0', '#9fe0c4', '#b8864e'] as const;
+
 export const BROW_COLORS = ['#2b2230', '#3a2a2a', '#5a3f3a', '#7a5a45', '#a0785a', '#8a6a8e', '#c9a27e'] as const;
 
 export const ACCESSORY_COLORS = [

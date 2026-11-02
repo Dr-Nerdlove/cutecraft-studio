@@ -1,6 +1,6 @@
 import { choice, color, slider, toggle, type Category, type Params } from '../../core/schema';
 import {
-  ACCESSORY_COLORS, BG_COLORS, FRAME_COLORS, LENS_COLORS, BLUSH_COLORS, BROW_COLORS, CLOTHES_COLORS, HAIR_COLORS, IRIS_COLORS, SHOE_COLORS, SKIN_TONES,
+  ACCESSORY_COLORS, BG_COLORS, GLITTER_COLORS, FRAME_COLORS, LENS_COLORS, BLUSH_COLORS, BROW_COLORS, CLOTHES_COLORS, HAIR_COLORS, IRIS_COLORS, SHOE_COLORS, SKIN_TONES,
 } from './palette';
 
 /** Typed view of the anime parameters. The keys here are the saved keys: never rename them. */
@@ -16,7 +16,8 @@ export interface AnimeParams {
   eyeShape: 'almond' | 'doe' | 'narrow' | 'round' | 'sparkly' | 'sleepy' | 'cat' | 'happy';
   eyeSize: number; eyeSpacing: number; eyeY: number; iris: string; hetero: boolean; iris2: string;
   shine: 'classic' | 'star' | 'heart';
-  lashes: 'none' | 'light' | 'full';
+  lashes: 'none' | 'light' | 'full' | 'volume';
+  lowerLashes: boolean; eyeliner: boolean; eyeshadow: 'none' | 'earthy' | 'glitter'; glitterColor: string;
   hairBack: 'short' | 'bob' | 'long' | 'wavy' | 'ponytail' | 'twintails' | 'buns'
     | 'sidetail' | 'braid' | 'hime' | 'messy' | 'drills' | 'curls' | 'afro' | 'dreads' | 'pixie';
   hairFront: 'straight' | 'side' | 'parted' | 'curtain' | 'blunt' | 'swept' | 'spiky' | 'forehead';
@@ -36,6 +37,8 @@ export interface AnimeParams {
 }
 
 const longHair = (p: Params): boolean => ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid', 'hime', 'drills', 'curls', 'afro', 'dreads'].includes(p.hairBack as string);
+
+const notHappy = (p: Params): boolean => p.eyeShape !== 'happy';
 
 export const animeCategories: readonly Category[] = [
   {
@@ -98,8 +101,14 @@ export const animeCategories: readonly Category[] = [
         { value: 'classic', labelKey: 'a.shine.classic' }, { value: 'star', labelKey: 'a.shine.star' }, { value: 'heart', labelKey: 'a.shine.heart' },
       ], 'classic'),
       choice('lashes', 'a.lashes', [
-        { value: 'none', labelKey: 'a.lashes.none' }, { value: 'light', labelKey: 'a.lashes.light' }, { value: 'full', labelKey: 'a.lashes.full' },
-      ], 'light'),
+        { value: 'none', labelKey: 'a.lashes.none' }, { value: 'light', labelKey: 'a.lashes.light' }, { value: 'full', labelKey: 'a.lashes.full' }, { value: 'volume', labelKey: 'a.lashes.volume' },
+      ], 'light', { showIf: notHappy }),
+      toggle('lowerLashes', 'a.lowerLashes', false, { showIf: notHappy }),
+      toggle('eyeliner', 'a.eyeliner', false, { showIf: notHappy }),
+      choice('eyeshadow', 'a.eyeshadow', [
+        { value: 'none', labelKey: 'a.eyeshadow.none' }, { value: 'earthy', labelKey: 'a.eyeshadow.earthy' }, { value: 'glitter', labelKey: 'a.eyeshadow.glitter' },
+      ], 'none'),
+      color('glitterColor', 'a.glitterColor', GLITTER_COLORS, '#f3d9a0', { showIf: (p) => p.eyeshadow === 'glitter' }),
     ],
   },
   {

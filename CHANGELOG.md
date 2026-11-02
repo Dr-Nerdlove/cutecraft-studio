@@ -56,6 +56,10 @@ All notable changes to CuteCraft Studio. Format: newest first.
 - Web app manifest and app icon, so the page can be added to a home screen.
 - The app is published on GitHub Pages and rebuilt automatically after every change to `main`.
 
+### Fixed
+
+- On phones and tablets, swiping up or down over a slider (e.g. eye spacing) now scrolls the page instead of moving the slider. A slider moves only when dragged sideways or tapped.
+
 ### Removed
 
 - The proportion slider (chibi to anime) is gone; every character now uses normal anime proportions. Saved characters that used a chibi setting look different now (taller, smaller head).

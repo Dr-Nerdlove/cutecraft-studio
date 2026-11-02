@@ -104,3 +104,22 @@ export function luminance(hex: string): number {
   const { r, g, b } = hexToRgb(hex);
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 }
+
+export interface HSV { h: number; s: number; v: number }
+
+/** HSV (h in degrees, s and v 0..1) to "#rrggbb". */
+export function hsvToHex({ h, s, v }: HSV): string {
+  const ss = clamp01(s), vv = clamp01(v);
+  const l = vv * (1 - ss / 2);
+  const sl = l === 0 || l === 1 ? 0 : (vv - l) / Math.min(l, 1 - l);
+  return hslToHex({ h, s: sl, l });
+}
+
+export function hexToHsv(hex: string): HSV {
+  const { r, g, b } = hexToRgb(hex);
+  const rr = r / 255, gg = g / 255, bb = b / 255;
+  const max = Math.max(rr, gg, bb), min = Math.min(rr, gg, bb);
+  const d = max - min;
+  const h = rgbToHsl({ r, g, b }).h;
+  return { h, s: max === 0 ? 0 : d / max, v: max };
+}

@@ -57,6 +57,8 @@ export const de = {
   'gallery.unnamed': 'Ohne Namen',
 
   'ui.colorCustom': 'Eigene Farbe wählen',
+  'ui.colorWheel': 'Farbkreis: Farbton und Sättigung wählen',
+  'ui.colorBrightness': 'Helligkeit',
   'ui.colorSwatch': 'Farbe {hex}',
   'ui.on': 'An',
   'ui.off': 'Aus',

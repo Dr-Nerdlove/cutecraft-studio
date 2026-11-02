@@ -58,6 +58,8 @@ export const en: Dictionary = {
   'gallery.unnamed': 'Unnamed',
 
   'ui.colorCustom': 'Pick a custom colour',
+  'ui.colorWheel': 'Colour wheel: pick hue and saturation',
+  'ui.colorBrightness': 'Brightness',
   'ui.colorSwatch': 'Colour {hex}',
   'ui.on': 'On',
   'ui.off': 'Off',

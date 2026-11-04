@@ -61,7 +61,7 @@ export const VIEW_H = 600;
 export const GROUND_Y = 552;
 
 // Semi-realistic faces: a bit narrower and longer than classic anime faces.
-const FACE_RATIO = { round: 0.9, oval: 0.81, heart: 0.88, square: 0.89 } as const;
+const FACE_RATIO = { round: 0.9, oval: 0.86, heart: 0.88, square: 0.89 } as const;
 
 export function computeGeo(p: AnimeParams): Geo {
   // Normal anime proportions only; the saved `proportion` value is ignored.
@@ -71,7 +71,7 @@ export function computeGeo(p: AnimeParams): Geo {
   const u = H * lerp(0.5, 1 / 7.1, k);
   const headW = u * FACE_RATIO[p.faceShape] * lerp(1.1, 0.93, k);
   // Body measurements use the oval head width, so the face shape never changes the body.
-  const baseHeadW = u * FACE_RATIO.oval * lerp(1.1, 0.93, k);
+  const baseHeadW = u * 0.81 * lerp(1.1, 0.93, k);
   const hw = headW / 2;
   // fine, light line art
   const lw = clamp(u * 0.0085, 0.8, 2.2);

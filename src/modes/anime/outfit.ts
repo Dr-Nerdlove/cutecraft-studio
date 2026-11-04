@@ -4,7 +4,8 @@ import {
 } from '../../core/svg';
 import { SH_F, armPoint, armSlice, edgeDown, edgeUp, legAt, shoulderAt, shoulderGeo } from './body';
 import { cel, flat, softLine, stroke, type Ctx } from './context';
-import { torsoHW, type Geo } from './geometry';
+import { DRESS_SPREAD, torsoHW, type Geo } from './geometry';
+import { isDress } from './schema';
 import { hairCastShadow } from './hair';
 
 const waistY = (g: Geo): number => g.yShoulder + g.torsoLen * 0.62;
@@ -42,10 +43,11 @@ function skirtSvg(ctx: Ctx, color: string, hemY: number, hemHW: number, pleats =
   return cel(ctx, d, color, { dx: -g.lw * 2.2, dy: -g.lw * 0.6, inside });
 }
 
-function pantsPath(g: Geo, tEnd: number, grow: number, flare: number): string {
+/** `hipGrow` adds extra room at the hips, `innerMax` (a negative x for the left leg) stops wide legs from crossing at the centre. */
+function pantsPath(g: Geo, tEnd: number, grow: number, flare: number, hipGrow = 0, innerMax = Infinity): string {
   const yW = waistY(g) - g.torsoLen * 0.03;
   const y0 = legAt(g, -1, 0).y;
-  const outerL: Pt[] = torsoLeftEdge2(g, yW, y0, grow);
+  const outerL: Pt[] = torsoLeftEdge2(g, yW, y0, Math.min(grow, 1.8));
   const innerL: Pt[] = [];
   const tc = (g.yCrotch - y0) / (g.yAnkle - y0);
   const steps = Math.max(6, Math.ceil(tEnd * 16));
@@ -53,13 +55,13 @@ function pantsPath(g: Geo, tEnd: number, grow: number, flare: number): string {
     const t = lerp(0, tEnd, i / steps);
     const s = legAt(g, -1, t);
     const f = i / steps;
-    outerL.push({ x: s.cx - s.hw - grow - flare * f, y: s.y });
+    outerL.push({ x: s.cx - s.hw - grow - flare * f - hipGrow * (1 - f * 0.6), y: s.y });
   }
   for (let i = steps; i >= 0; i--) {
     const t = lerp(tc, tEnd, i / steps);
     const s = legAt(g, -1, t);
     const f = (t - 0) / Math.max(0.0001, tEnd);
-    innerL.push({ x: s.cx + s.hw + grow + flare * f, y: s.y });
+    innerL.push({ x: Math.min(s.cx + s.hw + grow + flare * f, innerMax), y: s.y });
   }
   const hemL = outerL[outerL.length - 1];
   const hemIn = innerL[0];
@@ -85,14 +87,105 @@ function torsoLeftEdge2(g: Geo, y0: number, y1: number, grow: number): Pt[] {
   return pts;
 }
 
+function waistband(ctx: Ctx, c: string, grow = 3): string {
+  const { g } = ctx;
+  const yW = waistY(g) - g.torsoLen * 0.03;
+  const bandH = g.torsoLen * 0.055;
+  return path(
+    `${M(-torsoHW(g, yW, grow), yW)}${L(torsoHW(g, yW, grow), yW)}${L(torsoHW(g, yW + bandH, grow), yW + bandH)}${L(-torsoHW(g, yW + bandH, grow), yW + bandH)}Z`,
+    { fill: shade(c, 1.1), opacity: 0.8 },
+  );
+}
+
+/** Skin-tight trousers: follow every curve of the legs. */
+function leggingsSvg(ctx: Ctx, c: string): string {
+  const { g } = ctx;
+  const yW = waistY(g) - g.torsoLen * 0.03;
+  const bandH = g.torsoLen * 0.055;
+  let inside = waistband(ctx, c, 1.5);
+  inside += stroke(ctx, `${M(0, yW + bandH)}${L(0, g.yCrotch - 2)}`, shade(c, 1.4), g.lw * 0.6, { opacity: 0.45 });
+  // soft light along the front of each thigh and shin
+  let hi = '';
+  for (const side of [-1, 1] as const) {
+    for (const [t0, t1] of [[0.08, 0.42], [0.58, 0.92]] as const) {
+      const a = legAt(g, side, t0), b = legAt(g, side, t1);
+      hi += stroke(ctx, `${M(a.cx - a.hw * 0.35, a.y)}${L(b.cx - b.hw * 0.35, b.y)}`, lighten(c, 0.2), Math.max(2, (a.hw + b.hw) * 0.28), { opacity: 0.4 });
+    }
+  }
+  inside = lightSide(ctx, c, true) + soft(ctx, hi) + inside;
+  return cel(ctx, pantsPath(g, 0.985, 0.55, 0), c, { dx: -g.lw * 1.2, dy: -g.lw * 0.3, inside });
+}
+
+/** Wide, loose trousers with soft folds. */
+function baggySvg(ctx: Ctx, c: string): string {
+  const { g } = ctx;
+  const yW = waistY(g) - g.torsoLen * 0.03;
+  const bandH = g.torsoLen * 0.055;
+  let inside = waistband(ctx, c, 4);
+  inside += stroke(ctx, `${M(0, yW + bandH)}${L(0, g.yCrotch + g.legLen * 0.1)}`, shade(c, 1.4), g.lw * 0.7, { opacity: 0.5 });
+  let folds = '';
+  for (const side of [-1, 1] as const) {
+    for (const [t, a] of [[0.22, 0.36], [0.46, 0.3], [0.7, 0.36]] as const) {
+      const s0 = legAt(g, side, t);
+      const w = s0.hw + 3.5;
+      folds += stroke(ctx, `${M(s0.cx - w * 0.9, s0.y)}${Q(s0.cx - w * 0.1, s0.y + 4, s0.cx + w * 0.55, s0.y - 1)}`, foldColor(c), g.lw * 2.8, { opacity: a });
+    }
+  }
+  inside = lightSide(ctx, c, true) + soft(ctx, folds) + inside;
+  return cel(ctx, pantsPath(g, 0.965, 2.6, 3.2, 1.4, -0.5), c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside });
+}
+
+/** Tights: fishnet (a mesh, the skin shows through) or sheer black. Drawn over the legs, under the bottoms. */
+export function tightsSvg(ctx: Ctx): string {
+  const { g, p } = ctx;
+  if (p.socks !== 'fishnet' && p.socks !== 'sheer') return '';
+  const d = pantsPath(g, 0.985, 0.35, 0);
+  const clip = ctx.uid('tgc');
+  const dark = '#1c1722';
+  // soft shading on the shaded (right) side of each leg
+  let shadeStrokes = '';
+  for (const side of [-1, 1] as const) {
+    const a = legAt(g, side, 0.05), b = legAt(g, side, 0.97);
+    shadeStrokes += stroke(ctx, `${M(a.cx + a.hw * 0.85, a.y)}${L(b.cx + b.hw * 0.85, b.y)}`, dark, Math.max(2, a.hw * 0.7), { opacity: 0.22 });
+  }
+  const shadeG = soft(ctx, shadeStrokes);
+  let out = `<clipPath id="${clip}">${path(d)}</clipPath>`;
+  if (p.socks === 'sheer') {
+    let hi = '';
+    for (const side of [-1, 1] as const) {
+      for (const [t0, t1] of [[0.1, 0.4], [0.6, 0.9]] as const) {
+        const a = legAt(g, side, t0), b = legAt(g, side, t1);
+        hi += stroke(ctx, `${M(a.cx - a.hw * 0.4, a.y)}${L(b.cx - b.hw * 0.4, b.y)}`, '#ffffff', Math.max(1.6, (a.hw + b.hw) * 0.22), { opacity: 0.2 });
+      }
+    }
+    out += path(d, { fill: dark, opacity: 0.6 });
+    out += group(shadeG + soft(ctx, hi), { 'clip-path': `url(#${clip})` });
+    out += path(d, { fill: 'none', stroke: dark, 'stroke-width': g.lw * 0.9, 'stroke-opacity': 0.4, 'stroke-linejoin': 'round' });
+    return out;
+  }
+  // fishnet: a diamond mesh (a square grid turned by 45 degrees)
+  const pat = ctx.uid('fish');
+  const cell = Math.max(4.2, g.u * 0.062);
+  const c = p.sockColor;
+  out += `<pattern id="${pat}" width="${cell.toFixed(2)}" height="${cell.toFixed(2)}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">` +
+    `<path d="M0 0H${cell.toFixed(2)}M0 0V${cell.toFixed(2)}" fill="none" stroke="${c}" stroke-width="${Math.max(0.8, g.lw * 0.85).toFixed(2)}"/></pattern>`;
+  out += path(d, { fill: c, opacity: 0.1 });
+  out += group(shadeG, { 'clip-path': `url(#${clip})` });
+  out += path(d, { fill: `url(#${pat})` });
+  out += path(d, { fill: 'none', stroke: c, 'stroke-width': g.lw * 1.2, 'stroke-opacity': 0.8, 'stroke-linejoin': 'round' });
+  return out;
+}
+
 export function bottomSvg(ctx: Ctx): string {
   const { g, p } = ctx;
-  if (p.top === 'dress') return '';
+  if (isDress(p.top)) return '';
   const c = p.bottomColor;
   if (p.bottom === 'skirt') {
     const hemY = g.yCrotch + g.legLen * 0.3;
     return skirtSvg(ctx, c, hemY, g.hipHW * 1.1 + g.u * 0.11);
   }
+  if (p.bottom === 'leggings') return leggingsSvg(ctx, c);
+  if (p.bottom === 'baggy') return baggySvg(ctx, c);
   const tEnd = p.bottom === 'shorts' ? 0.3 : 0.985;
   const flare = p.bottom === 'shorts' ? 1.2 : 1.6;
   const yW = waistY(g) - g.torsoLen * 0.03;
@@ -156,7 +249,7 @@ function lightSide(ctx: Ctx, c: string, horizontal = false): string {
     `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${(-sh * 1.1).toFixed(1)}" y1="${(yS - g.torsoLen * 0.05).toFixed(1)}" x2="${(sh * 1.25).toFixed(1)}" y2="${yEnd.toFixed(1)}">` +
     `<stop offset="0" stop-color="${lighten(c, 0.12)}" stop-opacity="0.7"/><stop offset="0.45" stop-color="${c}" stop-opacity="0"/>` +
     `<stop offset="0.6" stop-color="${foldColor(c)}" stop-opacity="0"/><stop offset="1" stop-color="${foldColor(c)}" stop-opacity="0.5"/></linearGradient>` +
-    `<rect x="${(-sh * 3).toFixed(1)}" y="${(yS - g.u * 0.3).toFixed(1)}" width="${(sh * 6).toFixed(1)}" height="${(g.torsoLen * 2.4).toFixed(1)}" fill="url(#${id})"/>`
+    `<rect x="${(-sh * 3).toFixed(1)}" y="${(yS - g.u * 0.3).toFixed(1)}" width="${(sh * 6).toFixed(1)}" height="${(g.torsoLen * 2.4 + g.legLen).toFixed(1)}" fill="url(#${id})"/>`
   );
 }
 
@@ -261,6 +354,301 @@ export function sailorCollarSvg(ctx: Ctx): string {
 
 const sailorCollarColor = (c: string): string => (luminance(c) > 0.62 ? mix(c, '#3a4a8a', 0.72) : lighten(c, 0.5));
 
+
+// ---- more tops and dresses -------------------------------------------------------------------------
+
+/** Scalloped (n > 0) or straight (n = 0) hem from the left end to the right end; the pen is at the left end. */
+function scallopHem(hemHW: number, hemY: number, n: number, dip: number): string {
+  if (n <= 0) return L(hemHW, hemY);
+  let d = '';
+  const w = (hemHW * 2) / n;
+  for (let i = 0; i < n; i++) {
+    const x0 = -hemHW + w * i;
+    d += Q(x0 + w / 2, hemY + dip * 2, x0 + w, hemY);
+  }
+  return d;
+}
+
+interface DressSpec {
+  hemY: number;
+  hemHW: number;
+  hipY: number;
+  hipGrow: number;
+  /** Extra width of the skirt halfway down (bell shape), as a fraction. */
+  bell: number;
+  scallops: number;
+  dip: number;
+  /** Bodice taken from the shoulder line (with sleeves / wide straps)... */
+  edge?: TopOptions;
+  /** ...or a bodice that starts at this height with a straight-ish neckline (thin straps are added separately). */
+  neckY?: number;
+}
+
+const dressWaistY = (g: Geo): number => waistY(g) - g.torsoLen * 0.03;
+
+/** Outline of a dress: bodice, waist, skirt and hem. */
+function dressD(g: Geo, s: DressSpec): string {
+  const yW = dressWaistY(g);
+  const waistX = torsoHW(g, yW, 1.6) + 0.5;
+  // follow the real hips closely down to the hip line, then fall freely to the hem
+  const skirt: Pt[] = [{ x: -waistX, y: yW }];
+  for (let i = 1; i <= 3; i++) {
+    const y = lerp(yW, s.hipY, i / 3);
+    skirt.push({ x: -(torsoHW(g, y, 1.6) + (s.hipGrow - 1.6) * (i / 3) + 0.4), y });
+  }
+  if (s.bell > 0) {
+    skirt.push({ x: -(lerp(g.hipHW + s.hipGrow, s.hemHW, 0.55) * (1 + s.bell)), y: lerp(s.hipY, s.hemY, 0.42) });
+  }
+  skirt.push({ x: -s.hemHW, y: s.hemY });
+  const hem = scallopHem(s.hemHW, s.hemY, s.scallops, s.dip);
+  if (s.edge) {
+    const o = s.edge;
+    const { nl, seg } = neckCurve(g, o);
+    return M(nl.x, nl.y) + edgeDown(g, RG, o.grow ?? 1.6, o.tN ?? 0, yW, skirt) + hem + edgeUp(g, RG, o.grow ?? 1.6, o.tN ?? 0, yW, skirt) + seg + 'Z';
+  }
+  const yN = s.neckY ?? g.yShoulder;
+  const pts: Pt[] = [];
+  for (let i = 0; i < 4; i++) {
+    const y = lerp(yN, yW, i / 4);
+    pts.push({ x: -(torsoHW(g, y, 1.6) + 0.3), y });
+  }
+  pts.push(...skirt);
+  const right = pts.map((q) => ({ x: -q.x, y: q.y })).reverse();
+  return M(pts[0].x, pts[0].y) + smoothOpen(pts, 1 / 6, false) + hem + smoothOpen(right, 1 / 6, false) + Q(0, yN + g.torsoLen * 0.045, pts[0].x, pts[0].y) + 'Z';
+}
+
+/** Long soft folds from the waist to the hem. */
+function skirtFolds(ctx: Ctx, c: string, hemY: number, hemHW: number, fs: number[], w = 2.4, a = 0.3): string {
+  const { g } = ctx;
+  const yW = dressWaistY(g);
+  let folds = '';
+  for (const f of fs) {
+    folds += stroke(ctx, `${M(torsoHW(g, yW) * f, yW + 2)}${Q(hemHW * f * 0.8, (yW + hemY) / 2, hemHW * f * 1.02, hemY - 1)}`, shade(c, 1.4), g.lw * w, { opacity: a });
+  }
+  return soft(ctx, folds);
+}
+
+/** A band across the waist. */
+function waistSash(ctx: Ctx, color: string): string {
+  const { g } = ctx;
+  const yW = dressWaistY(g);
+  const T = g.torsoLen;
+  const w = torsoHW(g, yW, 3);
+  return path(`${M(-w, yW - T * 0.015)}${L(w, yW - T * 0.015)}${L(w, yW + T * 0.025)}${L(-w, yW + T * 0.025)}Z`, { fill: color });
+}
+
+const neckPathFor = (g: Geo, o: TopOptions): string => {
+  const { nr, seg } = neckCurve(g, o);
+  return M(nr.x, nr.y) + seg;
+};
+
+/** The sundress, sheath, maxi and ruffle dresses. */
+function dressVariantSvg(ctx: Ctx): string {
+  const { g, p } = ctx;
+  const c = p.topColor;
+  const T = g.torsoLen;
+  const yS = g.yShoulder;
+  const yW = dressWaistY(g);
+  const spread = DRESS_SPREAD[p.top];
+  const hemHW = g.hipHW * spread[0] + g.u * spread[1];
+  const hipY = yS + T * 0.9;
+  let out = '';
+  switch (p.top) {
+    case 'sundress': {
+      // light and flared with thin straps and small hearts
+      const hemY = g.yCrotch + g.legLen * 0.47;
+      const neckY = yS + T * 0.15;
+      const d = dressD(g, { hemY, hemHW, hipY, hipGrow: 2.2, bell: 0.04, scallops: 5, dip: g.u * 0.02, neckY });
+      let dots = '';
+      const dc = mix(c, '#ffffff', 0.72);
+      const sz = Math.max(1.8, g.u * 0.022);
+      let row = 0;
+      for (let y = yW + g.u * 0.12; y < hemY; y += g.u * 0.2, row++) {
+        for (let x = -hemHW * 1.2 + (row % 2) * g.u * 0.12; x < hemHW * 1.2; x += g.u * 0.24) dots += path(heartPath(x, y, sz), { fill: dc, opacity: 0.9 });
+      }
+      const rib = darken(mix(c, '#ff5f9a', 0.4), 0.02);
+      const inside = fabricShade(ctx, c, { waist: false }) + skirtFolds(ctx, c, hemY, hemHW, [-0.62, -0.31, 0, 0.31, 0.62], 2.2, 0.26) + dots + waistSash(ctx, rib);
+      out += cel(ctx, d, c, { dx: -g.lw * 2.2, dy: -g.lw * 0.6, inside });
+      // thin straps from the neckline to the shoulders
+      const sl = shoulderGeo(g, -1, RG, 0);
+      const top = shoulderAt(sl, 0.28);
+      const sw = Math.max(2.4, g.u * 0.032);
+      for (const side of [-1, 1] as const) {
+        const sd = `${M(side * torsoHW(g, neckY, 0.6) * 0.5, neckY + 1)}${L(side * Math.abs(top.x), top.y + 0.6)}`;
+        out += stroke(ctx, sd, outline(c), sw + g.lw * 0.8, { opacity: 0.55 });
+        out += stroke(ctx, sd, shade(c, 0.95), sw);
+      }
+      out += bowSvg(ctx, 0, neckY + T * 0.03, Math.max(2.8, g.u * 0.042), lighten(rib, 0.1));
+      break;
+    }
+    case 'sheath': {
+      // fitted all the way to the knee
+      const hemY = g.yCrotch + g.legLen * 0.46;
+      const o: TopOptions = { hemY, grow: 1.0, tN: 0.3, neckDepth: T * 0.035 };
+      const d = dressD(g, { hemY, hemHW, hipY, hipGrow: 1.2, bell: 0, scallops: 0, dip: 0, edge: o });
+      let seams = '';
+      for (const s of [-1, 1] as const) {
+        // darts at the waist
+        seams += stroke(ctx, `${M(s * torsoHW(g, yW) * 0.52, yW - T * 0.14)}${Q(s * torsoHW(g, yW) * 0.42, yW, s * torsoHW(g, yW) * 0.5, yW + T * 0.08)}`, shade(c, 1.4), g.lw * 1.8, { opacity: 0.3 });
+      }
+      // soft shine along the hip and thigh, a seam above the hem
+      const hi = stroke(ctx, `${M(-g.hipHW * 0.55, yW + T * 0.22)}${Q(-g.hipHW * 0.7, hipY, -g.hipHW * 0.6, hemY - 6)}`, lighten(c, 0.2), g.lw * 3.4, { opacity: 0.4 });
+      const hemSeam = stroke(ctx, `${M(-hemHW, hemY - g.u * 0.05)}${L(hemHW, hemY - g.u * 0.05)}`, shade(c, 1.5), g.lw * 0.7, { opacity: 0.3 });
+      const inside = fabricShade(ctx, c, { neckD: neckPathFor(g, o), waist: false }) + soft(ctx, seams + hi) + hemSeam;
+      out += cel(ctx, d, c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside });
+      break;
+    }
+    case 'maxi': {
+      // long and flowing, V-neck, flutter sleeves, a sash at the waist
+      const hemY = g.yAnkle - 7;
+      const o: TopOptions = { hemY, grow: 1.6, tN: 0.2, vNeck: true, neckDepth: T * 0.06 };
+      const d = dressD(g, { hemY, hemHW, hipY, hipGrow: 2.4, bell: 0.06, scallops: 6, dip: g.u * 0.03, edge: o });
+      const rib = mix(c, '#ff7aa8', 0.5);
+      const inside = fabricShade(ctx, c, { neckD: neckPathFor(g, o), waist: false }) + skirtFolds(ctx, c, hemY, hemHW, [-0.8, -0.55, -0.3, -0.1, 0.1, 0.3, 0.55, 0.8], 2.6, 0.26) + waistSash(ctx, rib);
+      out += cel(ctx, d, c, { dx: -g.lw * 2.2, dy: -g.lw * 0.6, inside });
+      break;
+    }
+    case 'lolita': {
+      // full ruffled skirt over a frilly petticoat, round collar, puff sleeves
+      const hemY = g.yCrotch + g.legLen * 0.4;
+      const cream = '#fffafc';
+      const o: TopOptions = { hemY, grow: 1.6, tN: 0.05, neckDepth: T * 0.03 };
+      const petti = dressD(g, { hemY: hemY + 7, hemHW: hemHW + 4, hipY, hipGrow: 2.5, bell: 0.14, scallops: 14, dip: g.u * 0.014 });
+      out += cel(ctx, petti, cream, { dx: -g.lw * 1.2, dy: -g.lw * 0.4, line: outline('#e8c8d8') });
+      const d = dressD(g, { hemY, hemHW, hipY, hipGrow: 2.5, bell: 0.14, scallops: 9, dip: g.u * 0.022, edge: o });
+      // a ruffled tier halfway down the skirt and a lace band at the hem
+      const tierY = lerp(yW, hemY, 0.5);
+      const tierH = g.u * 0.1;
+      const wide = hemHW * 1.3;
+      let tier = `${M(-wide, tierY)}${L(wide, tierY)}${L(wide, tierY + tierH)}`;
+      const n = 12;
+      for (let i = n; i > 0; i--) {
+        const x1 = -wide + ((2 * wide) / n) * (i - 1);
+        const x0 = -wide + ((2 * wide) / n) * i;
+        tier += Q((x0 + x1) / 2, tierY + tierH + g.u * 0.045, x1, tierY + tierH);
+      }
+      tier += 'Z';
+      const tierShadow = path(tier, { fill: foldColor(c), opacity: 0.3, transform: `translate(0 ${(g.lw * 1.8).toFixed(2)})`, filter: `url(#${ctx.soft})` });
+      const tierP = path(tier, { fill: lighten(c, 0.07), stroke: softLine(c), 'stroke-width': g.lw * 0.8, 'stroke-opacity': 0.55, 'stroke-linejoin': 'round' });
+      const lace = path(`${M(-wide, hemY - g.u * 0.075)}${L(wide, hemY - g.u * 0.075)}${L(wide, hemY + g.u * 0.2)}${L(-wide, hemY + g.u * 0.2)}Z`, { fill: cream, opacity: 0.96 });
+      const laceEdge = path(`${M(-wide, hemY - g.u * 0.075)}${L(wide, hemY - g.u * 0.075)}`, { stroke: outline('#e8c8d8'), 'stroke-width': g.lw * 0.8, opacity: 0.6 });
+      const rib = darken(mix(c, '#ff5f9a', 0.5), 0.02);
+      const inside = fabricShade(ctx, c, { neckD: neckPathFor(g, o), waist: false }) + skirtFolds(ctx, c, hemY, hemHW, [-0.7, -0.45, -0.2, 0.05, 0.3, 0.55, 0.78], 2.6, 0.24) + tierShadow + tierP + lace + laceEdge + waistSash(ctx, rib);
+      out += cel(ctx, d, c, { dx: -g.lw * 2.2, dy: -g.lw * 0.6, inside });
+      out += bowSvg(ctx, 0, yW + T * 0.005, Math.max(3.8, g.u * 0.055), lighten(rib, 0.08));
+      break;
+    }
+  }
+  return out;
+}
+
+/** Round collar of the ruffle dress: drawn after the sleeves, like the sailor collar. */
+function roundCollarSvg(ctx: Ctx): string {
+  const { g, p } = ctx;
+  const c = p.topColor;
+  const T = g.torsoLen;
+  const yS = g.yShoulder;
+  const sl = shoulderGeo(g, -1, RG + 0.5, 2.2);
+  const pts = [0, 0.25, 0.5].map((t) => shoulderAt(sl, t));
+  const S = pts[pts.length - 1];
+  const nk = g.neckHW;
+  const rp = pts.map((q) => ({ x: -q.x, y: q.y })).reverse();
+  const d =
+    M(pts[0].x, pts[0].y) + smoothOpen(pts, 1 / 6, false) +
+    C(S.x - 1.5, S.y + T * 0.07, -nk * 2.2, yS + T * 0.15, -nk * 0.45, yS + T * 0.125) +
+    L(nk * 0.45, yS + T * 0.125) +
+    C(nk * 2.2, yS + T * 0.15, -S.x + 1.5, S.y + T * 0.07, -S.x, S.y) +
+    smoothOpen(rp, 1 / 6, false) + Q(0, yS + T * 0.06, pts[0].x, pts[0].y) + 'Z';
+  const collar = luminance(c) > 0.84 ? mix(c, '#f0b8d8', 0.35) : '#fffafc';
+  let out = cel(ctx, d, collar, { dx: -g.lw * 1.2, dy: -g.lw * 0.5, inside: lightSide(ctx, collar), line: outline('#e8c8d8') });
+  out += bowSvg(ctx, 0, yS + T * 0.125, Math.max(3.2, g.u * 0.048), '#ff8fb8');
+  return out;
+}
+
+/** Collars that lie over the sleeves (drawn after them). */
+export function collarSvg(ctx: Ctx): string {
+  if (ctx.p.top === 'sailor') return sailorCollarSvg(ctx);
+  if (ctx.p.top === 'lolita') return roundCollarSvg(ctx);
+  return '';
+}
+
+/** One-shoulder top: a sleeve on one side, the other shoulder bare, a diagonal neckline. */
+function oneShoulderSvg(ctx: Ctx): string {
+  const { g, p } = ctx;
+  const c = p.topColor;
+  const T = g.torsoLen;
+  const yS = g.yShoulder;
+  const hem = yS + T * 0.74;
+  const grow = 1.2;
+  const sL = shoulderGeo(g, -1, RG, grow, 0);
+  const nl = sL.b[0];
+  const yArm = sL.ctr.y + sL.R * 1.05;
+  const right: Pt[] = [];
+  for (let i = 0; i <= 8; i++) {
+    const y = lerp(hem, yArm, i / 8);
+    right.push({ x: torsoHW(g, y, grow), y });
+  }
+  const hw = torsoHW(g, hem, grow);
+  const x1 = right[right.length - 1].x;
+  const neckline = Q((x1 + nl.x) / 2 - g.shHW * 0.05, (yArm + nl.y) / 2 + T * 0.07, nl.x, nl.y);
+  const d = M(nl.x, nl.y) + edgeDown(g, RG, grow, 0, hem) + Q(0, hem + T * 0.025, hw, hem) + smoothOpen(right, 1 / 6, false) + neckline + 'Z';
+  // soft draped folds running from the strap shoulder across the chest
+  let drape = '';
+  for (const [f, w] of [[0.0, 1.5], [0.32, 1.2], [0.62, 1.0]] as const) {
+    drape += stroke(ctx, `${M(nl.x + 3 + f * 8, nl.y + T * 0.08 + f * T * 0.04)}${Q(g.shHW * 0.15, yS + T * (0.3 + f * 0.1), g.waistHW * (0.7 - f * 0.1), yS + T * (0.55 + f * 0.1))}`, foldColor(c), g.lw * 2.8 * w, { opacity: 0.32 });
+  }
+  return cel(ctx, d, c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside: fabricShade(ctx, c, { waist: false }) + soft(ctx, drape) });
+}
+
+/** Cropped top with a heart-shaped cut-out on the chest. */
+function cutoutSvg(ctx: Ctx): string {
+  const { g, p } = ctx;
+  const c = p.topColor;
+  const T = g.torsoLen;
+  const yS = g.yShoulder;
+  const o: TopOptions = { hemY: yS + T * 0.5, grow: 1.4, neckDepth: T * 0.02, bow: T * 0.015 };
+  const hy = yS + T * 0.205;
+  const hs = Math.max(4.5, g.u * 0.078);
+  // the heart: skin shows through, with a soft shadow at its upper edge and a fine rim
+  const heart =
+    path(heartPath(0, hy, hs), { fill: ctx.skin }) +
+    ellipse(0, hy - hs * 0.45, hs * 0.9, hs * 0.28, { fill: ctx.skinShade, opacity: 0.5, filter: `url(#${ctx.soft})` }) +
+    path(heartPath(0, hy, hs), { fill: 'none', stroke: softLine(c), 'stroke-width': g.lw * 0.9, 'stroke-opacity': 0.8, 'stroke-linejoin': 'round' });
+  return cel(ctx, topPath(g, o), c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside: fabricShade(ctx, c, { neckD: neckPathFor(g, o), waist: false }) + heart });
+}
+
+/** Halter top (neckholder): straps round the neck, bare shoulders and arms. */
+function halterSvg(ctx: Ctx): string {
+  const { g, p } = ctx;
+  const c = p.topColor;
+  const T = g.torsoLen;
+  const yS = g.yShoulder;
+  const grow = 1.0;
+  const hem = yS + T * 0.68;
+  const nk = g.neckHW;
+  const a = nk * 2.0, b = nk * 1.2;
+  const yTop = yS + 0.5;
+  const sL = shoulderGeo(g, -1, RG, grow);
+  const yArm = sL.ctr.y + sL.R * 0.95;
+  const xa = torsoHW(g, yArm, grow);
+  const yN = yS + T * 0.23;
+  const left: Pt[] = [];
+  for (let i = 0; i <= 8; i++) {
+    const y = lerp(yArm, hem, i / 8);
+    left.push({ x: -torsoHW(g, y, grow), y });
+  }
+  const right = left.map((q) => ({ x: -q.x, y: q.y })).reverse();
+  const hw = torsoHW(g, hem, grow);
+  const d =
+    M(-a, yTop) + C(-a - 2, yTop + T * 0.06, -xa + 1, yArm - T * 0.1, -xa, yArm) + smoothOpen(left, 1 / 6, false) +
+    Q(0, hem + T * 0.025, hw, hem) + smoothOpen(right, 1 / 6, false) +
+    C(xa - 1, yArm - T * 0.1, a + 2, yTop + T * 0.06, a, yTop) + L(b, yTop) +
+    C(b * 1.0, yS + T * 0.1, b * 0.6, yN, 0, yN) + C(-b * 0.6, yN, -b * 1.0, yS + T * 0.1, -b, yTop) + 'Z';
+  let out = cel(ctx, d, c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside: fabricShade(ctx, c) });
+  out += bowSvg(ctx, 0, yN + 1, Math.max(2.8, g.u * 0.04), lighten(c, 0.22));
+  return out;
+}
+
 export function topSvg(ctx: Ctx): string {
   const { g, p } = ctx;
   const c = p.topColor;
@@ -322,6 +710,21 @@ export function topSvg(ctx: Ctx): string {
       out += cel(ctx, M(-cw, yS - ch) + Q(0, yS - ch - 1.5, cw, yS - ch) + L(cw * 1.08, yS + 2) + Q(0, yS + 4, -cw * 1.08, yS + 2) + 'Z', band, { dx: -g.lw, dy: -g.lw * 0.4, inside: roll });
       break;
     }
+    case 'oneshoulder':
+      out += oneShoulderSvg(ctx);
+      break;
+    case 'cutout':
+      out += cutoutSvg(ctx);
+      break;
+    case 'halter':
+      out += halterSvg(ctx);
+      break;
+    case 'sundress':
+    case 'sheath':
+    case 'maxi':
+    case 'lolita':
+      out += dressVariantSvg(ctx);
+      break;
     case 'dress': {
       const yW = waistY(g) - T * 0.03;
       const hemY = g.yCrotch + g.legLen * 0.42;
@@ -436,6 +839,27 @@ export function sleevesSvg(ctx: Ctx): string {
         out += sleeveCel(ctx, side, armSlice(ctx, side, SH_F, 0.36, RG, r * 0.14, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.36, false) });
         const collar = sailorCollarColor(c);
         out += flat(ctx, armSlice(ctx, side, 0.29, 0.36, RG, r * 0.14), collar, { lineW: g.lw * 0.8 });
+        break;
+      }
+      case 'oneshoulder':
+        // only the strap side has a sleeve; the other shoulder stays bare
+        if (side === -1) out += sleeveCel(ctx, side, armSlice(ctx, side, SH_F, 0.5, RG, r * 0.12, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.5, false) });
+        break;
+      case 'cutout':
+        out += sleeveCel(ctx, side, armSlice(ctx, side, SH_F, 0.3, RG, r * 0.1, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.3, false) });
+        break;
+      case 'sheath':
+        out += sleeveCel(ctx, side, armSlice(ctx, side, SH_F, 0.2, RG, r * 0.06, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.2, false) });
+        break;
+      case 'maxi':
+        // flutter sleeves: short and wide, with a light edge
+        out += sleeveCel(ctx, side, armSlice(ctx, side, SH_F, 0.25, RG, r * 0.85, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.25, false) });
+        out += flat(ctx, armSlice(ctx, side, 0.225, 0.26, RG, r * 0.85), lighten(c, 0.1), { lineW: g.lw * 0.8 });
+        break;
+      case 'lolita': {
+        // puffy sleeves gathered into a lace cuff
+        out += sleeveCel(ctx, side, armSlice(ctx, side, SH_F, 0.27, RG + r * 0.55, -r * 0.42, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.27, false) });
+        out += flat(ctx, armSlice(ctx, side, 0.245, 0.3, RG, r * 0.04), '#fffafc', { line: outline('#e8c8d8'), lineW: g.lw * 0.8 });
         break;
       }
       case 'dress':

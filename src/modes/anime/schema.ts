@@ -22,11 +22,12 @@ export interface AnimeParams {
     | 'sidetail' | 'braid' | 'hime' | 'messy' | 'drills' | 'curls' | 'afro' | 'dreads' | 'pixie';
   hairFront: 'straight' | 'side' | 'parted' | 'curtain' | 'blunt' | 'swept' | 'spiky' | 'forehead';
   hairColor: string; hairTip: string; tipStrength: number; hairLength: number; ahoge: boolean;
-  top: 'tshirt' | 'hoodie' | 'sailor' | 'sweater' | 'dress';
+  top: 'tshirt' | 'hoodie' | 'sailor' | 'sweater' | 'dress'
+    | 'oneshoulder' | 'cutout' | 'halter' | 'sundress' | 'sheath' | 'maxi' | 'lolita';
   topColor: string;
-  bottom: 'skirt' | 'shorts' | 'pants';
+  bottom: 'skirt' | 'shorts' | 'pants' | 'leggings' | 'baggy';
   bottomColor: string;
-  socks: 'none' | 'ankle' | 'knee';
+  socks: 'none' | 'ankle' | 'knee' | 'fishnet' | 'sheer';
   sockColor: string; shoeColor: string;
   headAcc: 'none' | 'bow' | 'cat' | 'bunny' | 'flower' | 'crown' | 'beret';
   headAccColor: string;
@@ -35,6 +36,10 @@ export interface AnimeParams {
   bgColor: string;
   bgPattern: 'plain' | 'dots' | 'hearts' | 'stars' | 'gradient' | 'bokeh' | 'sunset' | 'window';
 }
+
+/** Tops that are whole dresses: they replace the bottom. */
+export const DRESS_TOPS: readonly string[] = ['dress', 'sundress', 'sheath', 'maxi', 'lolita'];
+export const isDress = (top: string): boolean => DRESS_TOPS.includes(top);
 
 const longHair = (p: Params): boolean => ['long', 'wavy', 'ponytail', 'twintails', 'sidetail', 'braid', 'hime', 'drills', 'curls', 'afro', 'dreads'].includes(p.hairBack as string);
 
@@ -144,16 +149,22 @@ export const animeCategories: readonly Category[] = [
         { value: 'tshirt', labelKey: 'a.top.tshirt' }, { value: 'hoodie', labelKey: 'a.top.hoodie' },
         { value: 'sailor', labelKey: 'a.top.sailor' }, { value: 'sweater', labelKey: 'a.top.sweater' },
         { value: 'dress', labelKey: 'a.top.dress' },
+        { value: 'oneshoulder', labelKey: 'a.top.oneshoulder' }, { value: 'cutout', labelKey: 'a.top.cutout' },
+        { value: 'halter', labelKey: 'a.top.halter' }, { value: 'sundress', labelKey: 'a.top.sundress' },
+        { value: 'sheath', labelKey: 'a.top.sheath' }, { value: 'maxi', labelKey: 'a.top.maxi' },
+        { value: 'lolita', labelKey: 'a.top.lolita' },
       ], 'tshirt'),
       color('topColor', 'a.topColor', CLOTHES_COLORS, '#fdd5e4'),
       choice('bottom', 'a.bottom', [
         { value: 'skirt', labelKey: 'a.bottom.skirt' }, { value: 'shorts', labelKey: 'a.bottom.shorts' }, { value: 'pants', labelKey: 'a.bottom.pants' },
-      ], 'skirt', { showIf: (p) => p.top !== 'dress' }),
-      color('bottomColor', 'a.bottomColor', CLOTHES_COLORS, '#d9c7f7', { showIf: (p) => p.top !== 'dress' }),
+        { value: 'leggings', labelKey: 'a.bottom.leggings' }, { value: 'baggy', labelKey: 'a.bottom.baggy' },
+      ], 'skirt', { showIf: (p) => !isDress(p.top as string) }),
+      color('bottomColor', 'a.bottomColor', CLOTHES_COLORS, '#d9c7f7', { showIf: (p) => !isDress(p.top as string) }),
       choice('socks', 'a.socks', [
         { value: 'none', labelKey: 'a.socks.none' }, { value: 'ankle', labelKey: 'a.socks.ankle' }, { value: 'knee', labelKey: 'a.socks.knee' },
+        { value: 'fishnet', labelKey: 'a.socks.fishnet' }, { value: 'sheer', labelKey: 'a.socks.sheer' },
       ], 'knee'),
-      color('sockColor', 'a.sockColor', CLOTHES_COLORS, '#ffffff', { showIf: (p) => p.socks !== 'none' }),
+      color('sockColor', 'a.sockColor', CLOTHES_COLORS, '#ffffff', { showIf: (p) => p.socks !== 'none' && p.socks !== 'sheer' }),
       color('shoeColor', 'a.shoeColor', SHOE_COLORS, '#f9a8c9'),
     ],
   },

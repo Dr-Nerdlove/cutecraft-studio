@@ -1,5 +1,5 @@
 import { clamp, lerp, type Pt } from '../../core/svg';
-import type { AnimeParams } from './schema';
+import { isDress, type AnimeParams } from './schema';
 
 /**
  * All measurements of one character, in local units: x = 0 is the centre line, y = 0 is the ground,
@@ -46,6 +46,14 @@ export interface Geo {
   /** How far head accessories sit higher than the skull top (afro, curls and dreads lift them onto the hair). */
   accLift: number;
 }
+
+/**
+ * How far the hem of each dress reaches sideways: half width = hipHW * a + u * b. Used by the dress
+ * drawing and by the extents estimate, so the dress always stays inside the picture.
+ */
+export const DRESS_SPREAD: Readonly<Record<string, readonly [number, number]>> = {
+  dress: [1.12, 0.16], sundress: [1.1, 0.24], sheath: [0.96, 0], maxi: [1.1, 0.32], lolita: [1.12, 0.42],
+};
 
 /** Size of the afro cloud: `cy` is the centre's distance below the skull top, plus the radii. */
 export function afroDims(u: number, hw: number, hairLength: number): { cy: number; rx: number; ry: number } {
@@ -145,8 +153,11 @@ export function computeGeo(p: AnimeParams): Geo {
       curls: 2.0, dreads: 1.55, pixie: 1.2, afro: afro ? afro.rx * AFRO_BUMP / hw : 1 }[p.hairBack] * hw;
   geo.hairHalf = hairHalf;
   const longSpread = ['long', 'wavy', 'hime', 'curls', 'dreads'].includes(p.hairBack) ? geo.shHW * 1.12 : 0;
-  const hemHalf = p.top === 'dress' ? hipHW * 1.12 + u * 0.16 + 4 : hipHW * 1.1 + u * 0.11 + 4;
-  const bodyHalf = Math.max(geo.shHW + armR * 2 + armLen * Math.sin(geo.armAngle) + 4, hemHalf);
+  const spread = DRESS_SPREAD[p.top];
+  const hemHalf = isDress(p.top) && spread ? hipHW * spread[0] + u * spread[1] + (p.top === 'lolita' ? 12 : 4) : hipHW * 1.1 + u * 0.11 + 4;
+  // baggy trousers are wider than the hips
+  const baggyHalf = p.bottom === 'baggy' && !isDress(p.top) ? hipHW + 12 : 0;
+  const bodyHalf = Math.max(geo.shHW + armR * 2 + armLen * Math.sin(geo.armAngle) + 4, hemHalf, baggyHalf);
   geo.halfW = Math.max(hairHalf, longSpread, bodyHalf, p.headAcc === 'bunny' ? hw * 1.3 : 0);
 
   const availH = GROUND_Y - 22;

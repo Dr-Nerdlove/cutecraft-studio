@@ -2,6 +2,7 @@ import { darken, lighten, mix, outline, shade } from '../../core/color';
 import { C, L, M, Q, lerp, smoothClosed, smoothOpen, type Pt, ellipse, group, path } from '../../core/svg';
 import { cel, stroke, type Ctx } from './context';
 import { armGeo, torsoHW, type Geo } from './geometry';
+import { isDress } from './schema';
 
 // ---- legs -------------------------------------------------------------------------------------
 
@@ -26,6 +27,8 @@ export function legAt(g: Geo, side: -1 | 1, t: number): LegStation {
       break;
     }
   }
+  // heavy builds: the thighs touch rather than stick out beyond the hips
+  hw = Math.min(hw, g.hipHW * 0.485 - 0.35);
   // the thighs sit a little closer together; the feet stay where the shoes are
   const cx = Math.max(g.legCx * lerp(0.86, 0.92, Math.min(1, t / 0.6)), hw + 0.7); // ...but never so close that they merge
   return { cx: side * cx, y, hw };
@@ -58,13 +61,13 @@ export function legsSvg(ctx: Ctx): string {
 
 export function socksSvg(ctx: Ctx): string {
   const { g, p } = ctx;
-  if (p.socks === 'none') return '';
+  if (p.socks === 'none' || p.socks === 'fishnet' || p.socks === 'sheer') return ''; // tights: see tightsSvg
   let out = '';
   const t0 = p.socks === 'knee' ? 0.5 : 0.86;
   for (const side of [-1, 1] as const) {
     out += cel(ctx, legSlice(g, side, t0, 1, 0.9), p.sockColor, { dx: -g.lw * 1.1, dy: 0 });
     // ribbed band at the top (hidden under long trousers)
-    if (p.bottom === 'pants' && p.top !== 'dress') continue;
+    if (['pants', 'leggings', 'baggy'].includes(p.bottom) && !isDress(p.top)) continue;
     const top = legAt(g, side, t0);
     const bandH = Math.max(2.2, g.u * 0.028);
     const w = top.hw + 1.4;

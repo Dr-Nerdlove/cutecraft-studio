@@ -14,7 +14,7 @@ export const IRIS_COLORS = [
 
 export const CLOTHES_COLORS = [
   '#ffffff', '#fdd5e4', '#f9a8c9', '#ff7aa8', '#ffd9b0', '#fff1a8', '#c9f1d0', '#8fdcc0',
-  '#bfe3ff', '#8fb8f0', '#d9c7f7', '#b59af0', '#e84a5f', '#3a3f6b', '#4a3b44', '#c9a27e',
+  '#bfe3ff', '#8fb8f0', '#d9c7f7', '#b59af0', '#e84a5f', '#3a3f6b', '#4a3b44', '#c9a27e', '#2b2430',
 ] as const;
 
 export const SHOE_COLORS = ['#ffffff', '#f9a8c9', '#3a2f3a', '#7a4a3a', '#c9a27e', '#8fb8f0', '#b59af0', '#e84a5f'] as const;

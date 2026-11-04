@@ -4,6 +4,12 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ## Unreleased
 
+### Changed
+
+- Doe eyes are rounder (no boxy corners) and have no eyelid lines; the eyeliner is now a clean line that follows the lid and ends in a small soft wing.
+- Eyelashes (all styles, upper and lower) look more natural: fewer, curved, tapered lashes of varied length that lean towards the outer corner; lower lashes are short and sparse.
+- The oval face is a little wider.
+
 ### Added
 
 - New hairstyle "Messy bun": a puffy, loose bun on top of the head with a few soft loose pieces (also in the random generator).

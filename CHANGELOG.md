@@ -6,12 +6,16 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Added
 
+- New hairstyle "Messy bun": a puffy, loose bun on top of the head with a few soft loose pieces (also in the random generator).
 - Colour wheel: the palette button (🎨) next to every colour row now opens a colour wheel to pick the hue and saturation, plus a brightness slider.
 - More eye options: voluminous lashes, optional lower lashes, eyeliner (a crisp dark line with a longer wing), and earthy or glitter eyeshadow (with a choice of glitter colour). Eyeshadow also works on happy (closed) eyes.
 - More glasses: thin wire, square and cat-eye frames, plus sunglasses (round, aviators, heart and star). The frame colour can be chosen for all glasses, the lens colour for sunglasses.
 
 ### Changed
 
+- Side ponytail: it now grows out of a gathered point at the side of the head (the hair tie is visible) and falls in a soft curve with more volume, tapering to a soft tip.
+- Long, wavy and hime hair: the two front locks hang straight down, evenly wide and without the narrowing twist.
+- Removed all baby hairs and single stray hairs around the head, the tails and the back hair (the optional ahoge and the curl textures stay).
 - Long hair: the two side locks now fall straight down beside the face instead of bending at the cheek, and no stray hair strand crosses the ear any more.
 - Dreadlocks: the hairline sits higher (a longer-looking face) and the locks pile up higher on the head for more volume.
 - Doe eyes ("Rehaugen") are rounder: a taller opening, a fuller lower lid and a slightly larger iris.

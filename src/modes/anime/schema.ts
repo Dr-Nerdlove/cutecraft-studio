@@ -19,7 +19,7 @@ export interface AnimeParams {
   lashes: 'none' | 'light' | 'full' | 'volume';
   lowerLashes: boolean; eyeliner: boolean; eyeshadow: 'none' | 'earthy' | 'glitter'; glitterColor: string;
   hairBack: 'short' | 'bob' | 'long' | 'wavy' | 'ponytail' | 'twintails' | 'buns'
-    | 'sidetail' | 'braid' | 'hime' | 'messy' | 'drills' | 'curls' | 'afro' | 'dreads' | 'pixie';
+    | 'sidetail' | 'braid' | 'hime' | 'messy' | 'messybun' | 'drills' | 'curls' | 'afro' | 'dreads' | 'pixie';
   hairFront: 'straight' | 'side' | 'parted' | 'curtain' | 'blunt' | 'swept' | 'spiky' | 'forehead';
   hairColor: string; hairTip: string; tipStrength: number; hairLength: number; ahoge: boolean;
   top: 'tshirt' | 'hoodie' | 'sailor' | 'sweater' | 'dress';
@@ -120,7 +120,7 @@ export const animeCategories: readonly Category[] = [
         { value: 'ponytail', labelKey: 'a.hairBack.ponytail' }, { value: 'twintails', labelKey: 'a.hairBack.twintails' },
         { value: 'buns', labelKey: 'a.hairBack.buns' }, { value: 'sidetail', labelKey: 'a.hairBack.sidetail' },
         { value: 'braid', labelKey: 'a.hairBack.braid' }, { value: 'hime', labelKey: 'a.hairBack.hime' },
-        { value: 'messy', labelKey: 'a.hairBack.messy' }, { value: 'drills', labelKey: 'a.hairBack.drills' },
+        { value: 'messy', labelKey: 'a.hairBack.messy' }, { value: 'messybun', labelKey: 'a.hairBack.messybun' }, { value: 'drills', labelKey: 'a.hairBack.drills' },
         { value: 'curls', labelKey: 'a.hairBack.curls' }, { value: 'afro', labelKey: 'a.hairBack.afro' },
         { value: 'dreads', labelKey: 'a.hairBack.dreads' }, { value: 'pixie', labelKey: 'a.hairBack.pixie' },
       ], 'long'),

@@ -159,6 +159,7 @@ export const de = {
   'a.hairBack.braid': 'Geflochtener Zopf',
   'a.hairBack.hime': 'Prinzessinnen-Schnitt',
   'a.hairBack.messy': 'Kurz & wuschelig',
+  'a.hairBack.messybun': 'Messy Bun',
   'a.hairBack.drills': 'Lockenspiralen',
   'a.hairBack.curls': 'Locken',
   'a.hairBack.afro': 'Afro',

@@ -48,7 +48,7 @@ function pantsPath(g: Geo, tEnd: number, grow: number, flare: number): string {
   const outerL: Pt[] = torsoLeftEdge2(g, yW, y0, grow);
   const innerL: Pt[] = [];
   const tc = (g.yCrotch - y0) / (g.yAnkle - y0);
-  const steps = 6;
+  const steps = Math.max(6, Math.ceil(tEnd * 16));
   for (let i = 0; i <= steps; i++) {
     const t = lerp(0, tEnd, i / steps);
     const s = legAt(g, -1, t);
@@ -217,6 +217,50 @@ export function bowSvg(ctx: Ctx, x: number, y: number, s: number, color: string)
   return loops + knot;
 }
 
+const sailorOptions = (g: Geo): TopOptions => ({ hemY: g.yShoulder + g.torsoLen * 0.78, vNeck: true, neckDepth: g.torsoLen * 0.075, bow: g.torsoLen * 0.02, tN: 0.12 });
+
+/**
+ * The sailor collar. It is drawn after the sleeves, so its flaps lie on top of the shoulder seam
+ * and the sleeve caps, not behind them.
+ */
+export function sailorCollarSvg(ctx: Ctx): string {
+  const { g, p } = ctx;
+  if (p.top !== 'sailor') return '';
+  const c = p.topColor;
+  const T = g.torsoLen;
+  const yS = g.yShoulder;
+  let out = '';
+  const topD = topPath(g, sailorOptions(g));
+  const collar = sailorCollarColor(c);
+  // collar: follows the shoulder line, then falls diagonally to the V tip; it reaches out over the sleeve cap
+  const sl = shoulderGeo(g, -1, RG + 1.6, 2.4);
+  const pts = [0, 0.3, 0.6, 0.8, 0.93].map((t) => shoulderAt(sl, t));
+  const S = pts[pts.length - 1];
+  const sh = g.shHW;
+  const rp = pts.map((q) => ({ x: -q.x, y: q.y })).reverse();
+  const cd =
+    M(pts[0].x, pts[0].y) + smoothOpen(pts, 1 / 6, false) +
+    C(S.x - 1, S.y + T * 0.08, -sh * 0.55, yS + T * 0.3, 0, yS + T * 0.42) +
+    C(sh * 0.55, yS + T * 0.3, -S.x + 1, S.y + T * 0.08, -S.x, S.y) +
+    smoothOpen(rp, 1 / 6, false) + L(0, yS + T * 0.27) + 'Z';
+  const stripes = ctx.uid('stripe');
+  out += `<clipPath id="${stripes}">${path(cd)}</clipPath>`;
+  // the collar throws a soft shadow onto the blouse
+  const clipTop = ctx.uid('stclip');
+  out += `<clipPath id="${clipTop}">${path(topD)}</clipPath>`;
+  out += group(path(cd, { fill: mix(foldColor(c), '#5a3a60', 0.35), opacity: 0.4, transform: `translate(${g.lw.toFixed(2)} ${(g.lw * 2.6).toFixed(2)})`, filter: `url(#${ctx.soft})` }), { 'clip-path': `url(#${clipTop})` });
+  out += cel(ctx, cd, collar, { dx: -g.lw * 1.2, dy: -g.lw * 0.5, inside: lightSide(ctx, collar) });
+  out += group(
+    stroke(ctx, `${M(S.x * 0.95, S.y + T * 0.03)}${C(-sh * 0.75, yS + T * 0.2, -sh * 0.48, yS + T * 0.28, 0, yS + T * 0.38)}${C(sh * 0.48, yS + T * 0.28, sh * 0.75, yS + T * 0.2, -S.x * 0.95, S.y + T * 0.03)}`, '#ffffff', g.lw * 0.9, { opacity: 0.85 }),
+    { 'clip-path': `url(#${stripes})` },
+  );
+  const ribbon = luminance(collar) < 0.5 ? '#ff8fb8' : '#e84a5f';
+  out += bowSvg(ctx, 0, yS + T * 0.31, Math.max(3.5, g.u * 0.055), ribbon);
+  return out;
+}
+
+const sailorCollarColor = (c: string): string => (luminance(c) > 0.62 ? mix(c, '#3a4a8a', 0.72) : lighten(c, 0.5));
+
 export function topSvg(ctx: Ctx): string {
   const { g, p } = ctx;
   const c = p.topColor;
@@ -253,35 +297,7 @@ export function topSvg(ctx: Ctx): string {
       break;
     }
     case 'sailor': {
-      const hem = yS + T * 0.78;
-      const o: TopOptions = { hemY: hem, vNeck: true, neckDepth: T * 0.075, bow: T * 0.02, tN: 0.12 };
-      const topD = topPath(g, o);
-      out += cel(ctx, topD, c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside: fabricShade(ctx, c) });
-      const collar = luminance(c) > 0.62 ? mix(c, '#3a4a8a', 0.72) : lighten(c, 0.5);
-      // collar: follows the shoulder line, then falls diagonally to the V tip
-      const sl = shoulderGeo(g, -1, RG + 0.8, 2.4);
-      const pts = [0, 0.3, 0.6, 0.8, 0.93].map((t) => shoulderAt(sl, t));
-      const S = pts[pts.length - 1];
-      const sh = g.shHW;
-      const rp = pts.map((q) => ({ x: -q.x, y: q.y })).reverse();
-      const cd =
-        M(pts[0].x, pts[0].y) + smoothOpen(pts, 1 / 6, false) +
-        C(S.x - 1, S.y + T * 0.08, -sh * 0.55, yS + T * 0.3, 0, yS + T * 0.42) +
-        C(sh * 0.55, yS + T * 0.3, -S.x + 1, S.y + T * 0.08, -S.x, S.y) +
-        smoothOpen(rp, 1 / 6, false) + L(0, yS + T * 0.27) + 'Z';
-      const stripes = ctx.uid('stripe');
-      out += `<clipPath id="${stripes}">${path(cd)}</clipPath>`;
-      // the collar throws a soft shadow onto the blouse
-      const clipTop = ctx.uid('stclip');
-      out += `<clipPath id="${clipTop}">${path(topD)}</clipPath>`;
-      out += group(path(cd, { fill: mix(foldColor(c), '#5a3a60', 0.35), opacity: 0.4, transform: `translate(${g.lw.toFixed(2)} ${(g.lw * 2.6).toFixed(2)})`, filter: `url(#${ctx.soft})` }), { 'clip-path': `url(#${clipTop})` });
-      out += cel(ctx, cd, collar, { dx: -g.lw * 1.2, dy: -g.lw * 0.5, inside: lightSide(ctx, collar) });
-      out += group(
-        stroke(ctx, `${M(S.x * 0.95, S.y + T * 0.03)}${C(-sh * 0.75, yS + T * 0.2, -sh * 0.48, yS + T * 0.28, 0, yS + T * 0.38)}${C(sh * 0.48, yS + T * 0.28, sh * 0.75, yS + T * 0.2, -S.x * 0.95, S.y + T * 0.03)}`, '#ffffff', g.lw * 0.9, { opacity: 0.85 }),
-        { 'clip-path': `url(#${stripes})` },
-      );
-      const ribbon = luminance(collar) < 0.5 ? '#ff8fb8' : '#e84a5f';
-      out += bowSvg(ctx, 0, yS + T * 0.31, Math.max(3.5, g.u * 0.055), ribbon);
+      out += cel(ctx, topPath(g, sailorOptions(g)), c, { dx: -g.lw * 2, dy: -g.lw * 0.5, inside: fabricShade(ctx, c) });
       break;
     }
     case 'sweater': {
@@ -418,7 +434,7 @@ export function sleevesSvg(ctx: Ctx): string {
         break;
       case 'sailor': {
         out += sleeveCel(ctx, side, armSlice(ctx, side, SH_F, 0.36, RG, r * 0.14, false, true), c, { dx: -g.lw * 1.4, dy: -g.lw * 0.3, inside: sleeveShade(ctx, side, c, 0.36, false) });
-        const collar = luminance(c) > 0.62 ? mix(c, '#3a4a8a', 0.72) : lighten(c, 0.5);
+        const collar = sailorCollarColor(c);
         out += flat(ctx, armSlice(ctx, side, 0.29, 0.36, RG, r * 0.14), collar, { lineW: g.lw * 0.8 });
         break;
       }

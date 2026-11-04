@@ -2,6 +2,7 @@ import { darken, lighten, mix, outline, shade } from '../../core/color';
 import { C, L, M, Q, lerp, smoothClosed, smoothOpen, type Pt, ellipse, group, path } from '../../core/svg';
 import { cel, stroke, type Ctx } from './context';
 import { armGeo, torsoHW, type Geo } from './geometry';
+import { isDress } from './schema';
 
 // ---- legs -------------------------------------------------------------------------------------
 
@@ -11,8 +12,11 @@ export interface LegStation { cx: number; y: number; hw: number }
 export function legAt(g: Geo, side: -1 | 1, t: number): LegStation {
   const y0 = g.yCrotch - g.torsoLen * 0.1;
   const y = lerp(y0, g.yAnkle, t);
+  // Gentle anatomy: full upper thigh tapering to the knee, a subtle knee, a soft calf, a slim ankle.
+  const calf = Math.min(g.kneeHW * 1.16, g.thighHW * 0.82);
   const stations: ReadonlyArray<readonly [number, number]> = [
-    [0, g.thighHW], [0.3, g.thighHW * 0.97], [0.55, g.kneeHW], [0.74, g.kneeHW * 0.97], [1, g.ankleHW],
+    [0, g.thighHW * 1.08], [0.1, g.thighHW * 1.13], [0.3, g.thighHW * 0.96], [0.47, g.kneeHW * 1.02], [0.57, g.kneeHW * 0.94],
+    [0.7, calf], [0.88, Math.max(g.ankleHW * 1.3, g.ankleHW + 0.8)], [1, g.ankleHW],
   ];
   let hw = g.ankleHW;
   for (let i = 0; i < stations.length - 1; i++) {
@@ -23,11 +27,15 @@ export function legAt(g: Geo, side: -1 | 1, t: number): LegStation {
       break;
     }
   }
-  return { cx: side * g.legCx * lerp(1, 0.92, t), y, hw };
+  // heavy builds: the thighs touch rather than stick out beyond the hips
+  hw = Math.min(hw, g.hipHW * 0.485 - 0.35);
+  // the thighs sit a little closer together; the feet stay where the shoes are
+  const cx = Math.max(g.legCx * lerp(0.86, 0.92, Math.min(1, t / 0.6)), hw + 0.7); // ...but never so close that they merge
+  return { cx: side * cx, y, hw };
 }
 
 /** Closed outline of a slice of a leg between t0 and t1. */
-export function legSlice(g: Geo, side: -1 | 1, t0: number, t1: number, grow = 0, flare = 0, steps = 6): string {
+export function legSlice(g: Geo, side: -1 | 1, t0: number, t1: number, grow = 0, flare = 0, steps = Math.max(6, Math.ceil((t1 - t0) * 16))): string {
   const outer: Pt[] = [];
   const inner: Pt[] = [];
   for (let i = 0; i <= steps; i++) {
@@ -53,12 +61,13 @@ export function legsSvg(ctx: Ctx): string {
 
 export function socksSvg(ctx: Ctx): string {
   const { g, p } = ctx;
-  if (p.socks === 'none') return '';
+  if (p.socks === 'none' || p.socks === 'fishnet' || p.socks === 'sheer') return ''; // tights: see tightsSvg
   let out = '';
   const t0 = p.socks === 'knee' ? 0.5 : 0.86;
   for (const side of [-1, 1] as const) {
     out += cel(ctx, legSlice(g, side, t0, 1, 0.9), p.sockColor, { dx: -g.lw * 1.1, dy: 0 });
-    // ribbed band at the top
+    // ribbed band at the top (hidden under long trousers)
+    if (['pants', 'leggings', 'baggy'].includes(p.bottom) && !isDress(p.top)) continue;
     const top = legAt(g, side, t0);
     const bandH = Math.max(2.2, g.u * 0.028);
     const w = top.hw + 1.4;

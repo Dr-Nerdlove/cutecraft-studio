@@ -52,7 +52,8 @@ export function randomAnime(): AnimeParams {
   const browColor = pastelHair ? '#8a6a8e' : darkHair ? pick(['#2b2230', '#3a2a2a']) : hc.l > 0.6 ? '#a0785a' : '#5a3f3a';
 
   const hairBack = weighted([['short', 1], ['bob', 1.2], ['long', 1.6], ['wavy', 1.3], ['ponytail', 1], ['twintails', 1.2], ['buns', 0.9], ['sidetail', 0.9], ['braid', 0.9], ['hime', 0.9], ['messy', 0.7], ['messybun', 0.8], ['drills', 0.6], ['curls', 0.8], ['afro', 0.5], ['dreads', 0.5], ['pixie', 0.8]] as const);
-  const top = weighted([['tshirt', 1], ['hoodie', 1], ['sailor', 1.2], ['sweater', 1], ['dress', 1.4]] as const);
+  const top = weighted([['tshirt', 1], ['hoodie', 1], ['sailor', 1.2], ['sweater', 1], ['dress', 1.4],
+    ['oneshoulder', 0.7], ['cutout', 0.7], ['halter', 0.7], ['sundress', 0.9], ['sheath', 0.7], ['maxi', 0.8], ['lolita', 0.8]] as const);
 
   return {
     proportion: 100,
@@ -95,9 +96,9 @@ export function randomAnime(): AnimeParams {
     ahoge: chance(0.15),
     top,
     topColor,
-    bottom: pick(['skirt', 'skirt', 'shorts', 'pants'] as const),
+    bottom: pick(['skirt', 'skirt', 'shorts', 'pants', 'leggings', 'baggy'] as const),
     bottomColor,
-    socks: weighted([['none', 1], ['ankle', 1.4], ['knee', 2.2]] as const),
+    socks: weighted([['none', 1], ['ankle', 1.4], ['knee', 2.2], ['fishnet', 0.5], ['sheer', 0.6]] as const),
     sockColor: chance(0.5) ? '#ffffff' : nearHue(CLOTHES_COLORS, baseHue + pick([0, 60, 180])),
     shoeColor: chance(0.5) ? pick(['#ffffff', '#3a2f3a', '#7a4a3a']) : nearHue(SHOE_COLORS, baseHue + 30),
     headAcc: weighted([['none', 1.3], ['bow', 2], ['cat', 1.2], ['bunny', 1], ['flower', 1.2], ['crown', 0.8], ['beret', 1]] as const),

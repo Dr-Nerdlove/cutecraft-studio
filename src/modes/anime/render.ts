@@ -3,7 +3,7 @@ import { VIEW_H, VIEW_W, GROUND_Y, portraitBox } from './geometry';
 import { makeCtx } from './context';
 import { backgroundSvg } from './background';
 import { armsSvg, groundShadowSvg, legsSvg, neckSvg, shoesSvg, socksSvg, torsoSvg } from './body';
-import { bottomSvg, hoodBackSvg, sleevesSvg, topSvg } from './outfit';
+import { bottomSvg, tightsSvg, hoodBackSvg, collarSvg, sleevesSvg, topSvg } from './outfit';
 import { blushSvg, browsSvg, earsSvg, faceBaseSvg, frecklesSvg, mouthSvg, noseSvg } from './face';
 import { eyesSvg } from './eyes';
 import { hairBackSvg, hairFrontSvg } from './hair';
@@ -26,12 +26,14 @@ export function renderAnime(p: AnimeParams, prefix: string, view: ViewKind = 'fu
     socksSvg(ctx) +
     shoesSvg(ctx) +
     torsoSvg(ctx) +
+    tightsSvg(ctx) +
     bottomSvg(ctx) +
     hoodBackSvg(ctx) +
     neckSvg(ctx) +
     topSvg(ctx) +
     armsSvg(ctx) +
     sleevesSvg(ctx) +
+    collarSvg(ctx) +
     // head
     earsSvg(ctx) +
     faceBaseSvg(ctx) +

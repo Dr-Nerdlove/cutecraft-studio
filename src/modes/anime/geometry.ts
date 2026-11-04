@@ -139,6 +139,7 @@ export function computeGeo(p: AnimeParams): Geo {
       p.ahoge ? 0.32 + lift : 0,
       p.hairBack === 'buns' ? 0.22 : 0,
       p.hairBack === 'messy' ? 0.14 : 0,
+      p.hairBack === 'messybun' ? 0.52 : 0,
       afro ? afroTopU + (p.ahoge ? 0.3 : 0) : 0,
       p.hairBack === 'pixie' ? 0.17 : 0,
       p.hairBack === 'dreads' ? 0.2 : 0,
@@ -149,7 +150,7 @@ export function computeGeo(p: AnimeParams): Geo {
   geo.topExtra = topU * u;
 
   const hairHalf =
-    { short: 1.25, bob: 1.35, long: 1.3, wavy: 1.38, ponytail: 2.0, twintails: 2.15, buns: 1.25, sidetail: 1.9, braid: 1.6, hime: 1.4, messy: 1.45, drills: 2.2,
+    { short: 1.25, bob: 1.35, long: 1.3, wavy: 1.38, ponytail: 2.0, twintails: 2.15, buns: 1.25, messybun: 1.2, sidetail: 1.9, braid: 1.6, hime: 1.4, messy: 1.45, drills: 2.2,
       curls: 2.0, dreads: 1.55, pixie: 1.2, afro: afro ? afro.rx * AFRO_BUMP / hw : 1 }[p.hairBack] * hw;
   geo.hairHalf = hairHalf;
   const longSpread = ['long', 'wavy', 'hime', 'curls', 'dreads'].includes(p.hairBack) ? geo.shHW * 1.12 : 0;

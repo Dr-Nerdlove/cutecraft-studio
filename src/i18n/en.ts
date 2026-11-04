@@ -160,6 +160,7 @@ export const en: Dictionary = {
   'a.hairBack.braid': 'Side braid',
   'a.hairBack.hime': 'Princess cut',
   'a.hairBack.messy': 'Short & messy',
+  'a.hairBack.messybun': 'Messy bun',
   'a.hairBack.drills': 'Drill curls',
   'a.hairBack.curls': 'Curls',
   'a.hairBack.afro': 'Afro',

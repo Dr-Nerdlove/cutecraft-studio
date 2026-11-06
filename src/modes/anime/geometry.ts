@@ -64,6 +64,9 @@ export function afroDims(u: number, hw: number, hairLength: number): { cy: numbe
 /** Largest reach of the afro bumps beyond its base ellipse (as a fraction of the radius). */
 export const AFRO_BUMP = 1.1;
 
+/** Room above the skull top (in head heights) that the scale always leaves free: the bunny ears. */
+const RESERVE_TOP_U = 0.62;
+
 export const VIEW_W = 400;
 export const VIEW_H = 600;
 export const GROUND_Y = 552;
@@ -161,9 +164,14 @@ export function computeGeo(p: AnimeParams): Geo {
   const bodyHalf = Math.max(geo.shHW + armR * 2 + armLen * Math.sin(geo.armAngle) + 4, hemHalf, baggyHalf);
   geo.halfW = Math.max(hairHalf, longSpread, bodyHalf, p.headAcc === 'bunny' ? hw * 1.3 : 0);
 
+  // The figure's size depends on the body only: room is always reserved for the tallest head
+  // accessory (bunny ears), so switching hair, accessories or clothes never resizes the figure.
+  // Only when something still would not fit (e.g. a big afro with ears on a tall figure) does the
+  // figure shrink, and then only as much as needed.
   const availH = GROUND_Y - 22;
-  const fit = Math.min(1.04, availH / (H + geo.topExtra), (VIEW_W / 2 - 8) / geo.halfW);
-  geo.scale = fit * lerp(0.74, 1, p.height / 100);
+  const bodyFit = Math.min(1.04, availH / (H + RESERVE_TOP_U * u));
+  const maxFit = Math.min(availH / (H + geo.topExtra), (VIEW_W / 2 - 8) / geo.halfW);
+  geo.scale = Math.min(bodyFit * lerp(0.74, 1, p.height / 100), maxFit);
   return geo;
 }
 

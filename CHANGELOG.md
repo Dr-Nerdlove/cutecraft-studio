@@ -4,6 +4,10 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ## Unreleased
 
+### Fixed
+
+- The figure keeps its size when the head accessory, hairstyle or outfit changes (bunny ears used to shrink it). Figures are a little smaller overall, so even the tallest accessories fit.
+
 ### Changed
 
 - Doe eyes are rounder (no boxy corners) and have no eyelid lines; the eyeliner is now a clean line that follows the lid and ends in a small soft wing.

@@ -4,6 +4,10 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ## Unreleased
 
+### Fixed
+
+- Skirts no longer stick out at the hips under tops, and the ruffle dress (and its petticoat) now widens smoothly from the waist instead of denting in and bulging out at the hips.
+
 ### Changed
 
 - Doe eyes are rounder (no boxy corners) and have no eyelid lines; the eyeliner is now a clean line that follows the lid and ends in a small soft wing.

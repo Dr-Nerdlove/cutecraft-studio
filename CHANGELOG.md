@@ -6,6 +6,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Fixed
 
+- Skirts no longer stick out at the hips under tops, and the ruffle dress (and its petticoat) now widens smoothly from the waist instead of denting in and bulging out at the hips.
 - The figure keeps its size when the head accessory, hairstyle or outfit changes (bunny ears used to shrink it). Figures are a little smaller overall, so even the tallest accessories fit.
 
 ### Changed

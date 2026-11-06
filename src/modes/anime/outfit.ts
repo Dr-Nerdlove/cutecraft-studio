@@ -12,9 +12,19 @@ const waistY = (g: Geo): number => g.yShoulder + g.torsoLen * 0.62;
 
 // ---- bottoms ----------------------------------------------------------------------------------
 
-function flaredSkirtPath(g: Geo, topY: number, topHW: number, hipY: number, hipHWv: number, hemY: number, hemHW: number, scallops: number): string {
-  const left: Pt[] = [{ x: -topHW, y: topY }, { x: -hipHWv, y: hipY }, { x: -hemHW, y: hemY }];
-  const right: Pt[] = [{ x: hemHW, y: hemY }, { x: hipHWv, y: hipY }, { x: topHW, y: topY }];
+/**
+ * Skirt outline: hugs the body (torso edge plus `grow`) from the waist down to the hip line, then
+ * falls straight to the hem. Following the body closely keeps the part under a top hidden and
+ * avoids a bulge at the hips.
+ */
+function flaredSkirtPath(g: Geo, topY: number, grow: number, hipY: number, hemY: number, hemHW: number, scallops: number): string {
+  const left: Pt[] = [];
+  for (let i = 0; i <= 4; i++) {
+    const y = lerp(topY, hipY, i / 4);
+    left.push({ x: -torsoHW(g, y, grow), y });
+  }
+  left.push({ x: -hemHW, y: hemY });
+  const right: Pt[] = left.map((q) => ({ x: -q.x, y: q.y })).reverse();
   let d = M(left[0].x, left[0].y) + smoothOpen(left, 1 / 6, false);
   const dip = g.u * 0.028;
   const w = (hemHW * 2) / scallops;
@@ -30,7 +40,7 @@ function skirtSvg(ctx: Ctx, color: string, hemY: number, hemHW: number, pleats =
   const { g } = ctx;
   const yW = waistY(g) - g.torsoLen * 0.03;
   const yHip = g.yShoulder + g.torsoLen * 0.88;
-  const d = flaredSkirtPath(g, yW, torsoHW(g, yW, 1.6), yHip, g.hipHW + 1.8, hemY, hemHW, 6);
+  const d = flaredSkirtPath(g, yW, 1.3, yHip, hemY, hemHW, 6);
   let inside = '';
   let folds = '';
   if (pleats) {
@@ -390,16 +400,28 @@ const dressWaistY = (g: Geo): number => waistY(g) - g.torsoLen * 0.03;
 function dressD(g: Geo, s: DressSpec): string {
   const yW = dressWaistY(g);
   const waistX = torsoHW(g, yW, 1.6) + 0.5;
-  // follow the real hips closely down to the hip line, then fall freely to the hem
   const skirt: Pt[] = [{ x: -waistX, y: yW }];
-  for (let i = 1; i <= 3; i++) {
-    const y = lerp(yW, s.hipY, i / 3);
-    skirt.push({ x: -(torsoHW(g, y, 1.6) + (s.hipGrow - 1.6) * (i / 3) + 0.4), y });
-  }
+  const bodyX = (y: number): number =>
+    y <= s.hipY ? torsoHW(g, y, 1.6) + (s.hipGrow - 1.6) * ((y - yW) / (s.hipY - yW)) + 0.4 : g.hipHW + s.hipGrow + 0.4;
   if (s.bell > 0) {
-    skirt.push({ x: -(lerp(g.hipHW + s.hipGrow, s.hemHW, 0.55) * (1 + s.bell)), y: lerp(s.hipY, s.hemY, 0.42) });
+    // a bell that widens steadily from the waist to the hem and never dips back in at the hips:
+    // the wider of the body and a smooth flare curve (the larger `bell`, the earlier it opens up)
+    const n = 8;
+    const pw = 1 + s.bell * 6;
+    for (let i = 1; i <= n; i++) {
+      const t = i / n;
+      const y = lerp(yW, s.hemY, t);
+      const flare = lerp(waistX, s.hemHW, 1 - Math.pow(1 - t, pw));
+      skirt.push({ x: -(i === n ? s.hemHW : Math.max(bodyX(y), flare)), y });
+    }
+  } else {
+    // follow the real hips closely down to the hip line, then fall freely to the hem
+    for (let i = 1; i <= 3; i++) {
+      const y = lerp(yW, s.hipY, i / 3);
+      skirt.push({ x: -bodyX(y), y });
+    }
+    skirt.push({ x: -s.hemHW, y: s.hemY });
   }
-  skirt.push({ x: -s.hemHW, y: s.hemY });
   const hem = scallopHem(s.hemHW, s.hemY, s.scallops, s.dip);
   if (s.edge) {
     const o = s.edge;

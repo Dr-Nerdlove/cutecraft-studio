@@ -6,13 +6,16 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Fixed
 
+- The shoulder slider now only moves the shoulders; waist, hips and legs no longer change with it.
+- The face gets a little broader when the body is made broader (build and shoulders) and narrower when it gets slimmer.
+- Arms are thicker, and the shoes are narrower (they were much wider than the ankles).
 - The glitter eyeshadow (and its sparkles) now follows the shape of the eye: it sits on the actual lid and tilts with the eye, e.g. rises towards the outer corner on cat eyes.
-
 - Skirts no longer stick out at the hips under tops, and the ruffle dress (and its petticoat) now widens smoothly from the waist instead of denting in and bulging out at the hips.
 - The figure keeps its size when the head accessory, hairstyle or outfit changes (bunny ears used to shrink it). Figures are a little smaller overall, so even the tallest accessories fit.
 
 ### Changed
 
+- All mouths were redrawn to look more natural: slimmer upper lip with a soft bow and a fuller lower lip instead of lumpy shapes, a cleaner open smile and wide grin with a row of teeth, a softer little "o", and finer cat, smirk and fang mouths.
 - Saving a character no longer suggests an automatic name like "Cutie 1": the name field stays empty unless you type a name (unnamed characters show as "Unnamed" in the gallery).
 - Doe eyes are rounder (no boxy corners) and have no eyelid lines; the eyeliner is now a clean line that follows the lid and ends in a small soft wing.
 - Eyelashes (all styles, upper and lower) look more natural: fewer, curved, tapered lashes of varied length that lean towards the outer corner; lower lashes are short and sparse.
@@ -20,6 +23,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Added
 
+- Four new face shapes: high cheekbones (with a soft cheekbone highlight and hollow), long and slim, delicate with a small chin, and broad with a strong jaw (also in the random generator).
 - New hairstyle "Messy bun": a puffy, loose bun on top of the head with a few soft loose pieces (also in the random generator).
 - More clothes: one-shoulder, cut-out (heart) and halter tops; summer, sheath, maxi and ruffle dresses (they replace the bottom, like the dress); leggings and baggy pants; fishnet tights and sheer black tights (the sheer tights are always black, the fishnet follows the sock colour). Black was added to the clothes colours. The random button uses them too.
 - Colour wheel: the palette button (🎨) next to every colour row now opens a colour wheel to pick the hue and saturation, plus a brightness slider.

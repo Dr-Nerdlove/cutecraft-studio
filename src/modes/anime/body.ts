@@ -83,7 +83,7 @@ export function shoesSvg(ctx: Ctx): string {
   let out = '';
   for (const side of [-1, 1] as const) {
     const a = legAt(g, side, 1);
-    const sw = Math.max(g.ankleHW * 2.3, 11);
+    const sw = Math.max(g.ankleHW * 1.7, 7.5);
     const sx = a.cx + side * g.ankleHW * 0.45;
     const h = g.shoeH;
     const pts: Pt[] = [
@@ -242,7 +242,7 @@ export function armSlice(ctx: Ctx, side: -1 | 1, f0: number, f1: number, grow = 
   const len = Math.hypot(dx, dy);
   const dir = { x: dx / len, y: dy / len };
   const nrm = { x: -dir.y, y: dir.x };
-  const widthAt = (f: number): number => a.r * lerp(1, 0.76, Math.min(1, Math.max(0, (f - 0.35) / 0.65)));
+  const widthAt = (f: number): number => a.r * lerp(1, 0.8, Math.min(1, Math.max(0, (f - 0.35) / 0.65)));
   const posAt = (f: number): Pt => ({ x: a.x0 + dir.x * len * f, y: a.y0 + dir.y * len * f });
 
   const leftPts: Pt[] = [];

@@ -18,10 +18,6 @@ export function addToGallery(character: CharacterState, name: string): boolean {
   return saveGallery(items);
 }
 
-export function nextAutoName(): string {
-  return t('gallery.autoName', { n: loadGallery().length + 1 });
-}
-
 export function openGallery(onLoad: (item: GalleryItem) => void): void {
   const previous = document.activeElement as HTMLElement | null;
   const overlay = h('div', 'modal-overlay sheet-overlay');

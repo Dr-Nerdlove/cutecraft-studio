@@ -91,7 +91,10 @@ const SPARKLES: ReadonlyArray<readonly [number, number, number, number]> = [
  * Soft eyeshadow (earthy or glitter) as a blurred painted wash over the lid, centred at (cx, cy) with
  * radii (rx, ry), darkest towards the outer corner. Returns the markup; gradient defs go into `defs`.
  */
-function shadowWash(ctx: Ctx, defs: string[], cx: number, cy: number, rx: number, ry: number, W: number, Hh: number, smudgeOn = true): string {
+function shadowWash(
+  ctx: Ctx, defs: string[], cx: number, cy: number, rx: number, ry: number, W: number, Hh: number,
+  smudgeAt: Pt | null = { x: W * 0.34, y: Hh * 0.38 }, rot = 0,
+): string {
   const { p } = ctx;
   if (p.eyeshadow === 'none') return '';
   const glitter = p.eyeshadow === 'glitter';
@@ -114,18 +117,36 @@ function shadowWash(ctx: Ctx, defs: string[], cx: number, cy: number, rx: number
   if (glitter) out += ellipse(cx - rx * 0.3, cy, rx * 0.5, ry * 0.8, { fill: radial('esl', lighten(inner, 0.35), 0.85) });
   out += ellipse(cx + rx * 0.45, cy + ry * 0.15, rx * 0.5, ry * 0.75, { fill: radial('eso', dark, 0.75) });
   // smudge along the outer lower lid
-  if (smudgeOn) out += ellipse(W * 0.34, Hh * 0.38, W * 0.17, Hh * 0.07, { fill: radial('esm', smudge, 0.17) });
+  // (the wash itself is tilted to follow the lid; the smudge is placed on the lower lid)
+  out = rot ? group(out, { transform: `rotate(${rot} ${cx} ${cy})` }) : out;
+  if (smudgeAt) out += ellipse(smudgeAt.x, smudgeAt.y, W * 0.17, Hh * 0.07, { fill: radial('esm', smudge, 0.17) });
   return out;
 }
 
-function sparkles(ctx: Ctx, W: number, Hh: number, scale: number, dy: number, lower = true): string {
+/** y of a polyline at x (linear interpolation, clamped to the ends); points run along x. */
+function yAt(pts: Pt[], x: number): number {
+  const a = pts.slice().sort((u, v) => u.x - v.x);
+  if (x <= a[0].x) return a[0].y;
+  for (let i = 1; i < a.length; i++) {
+    if (x <= a[i].x) return lerp(a[i - 1].y, a[i].y, (x - a[i - 1].x) / (a[i].x - a[i - 1].x || 1));
+  }
+  return a[a.length - 1].y;
+}
+
+/** Lid curves the sparkles follow, so they sit on the actual eye shape (upper lid, lower lid). */
+interface LidRef { up: Pt[]; low: Pt[] }
+
+function sparkles(ctx: Ctx, W: number, Hh: number, scale: number, dy: number, lower = true, lid?: LidRef): string {
   const { p } = ctx;
   if (p.eyeshadow !== 'glitter') return '';
   const tint = lighten(p.glitterColor, 0.45);
   let out = '';
   SPARKLES.forEach(([x, y, r, o], i) => {
     if (y > 0 && !lower) return;
-    const px = x * W, py = y * Hh * scale + dy, pr = Math.max(0.25, r * W);
+    const px = x * W;
+    // sparkles above the eye keep their distance from the upper lid, lower ones from the lower lid
+    const py = lid ? (y < 0 ? yAt(lid.up, px) + (y + 0.5) * Hh * scale : yAt(lid.low, px) + (y - 0.4) * Hh) : y * Hh * scale + dy;
+    const pr = Math.max(0.25, r * W);
     out += i % 3 === 0 ? path(starPath(px, py, pr * 1.9, 0.2), { fill: i % 2 ? '#ffffff' : tint, opacity: o }) : circle(px, py, pr, { fill: i % 2 ? tint : '#ffffff', opacity: o });
   });
   return out;
@@ -148,7 +169,7 @@ function eyeSvg(ctx: Ctx, side: -1 | 1, irisColor: string, W: number, Hh: number
     const hdefs: string[] = [];
     let inner = '';
     if (p.eyeshadow !== 'none') {
-      inner += shadowWash(ctx, hdefs, 0, -Hh * 0.5, w * 1.05, Hh * 0.38, W, Hh, false);
+      inner += shadowWash(ctx, hdefs, 0, -Hh * 0.5, w * 1.05, Hh * 0.38, W, Hh, null);
       inner += sparkles(ctx, W, Hh, 0.6, Hh * 0.1, false);
     }
     inner += path(arc + back, { fill: lid });
@@ -185,7 +206,11 @@ function eyeSvg(ctx: Ctx, side: -1 | 1, irisColor: string, W: number, Hh: number
   let eye = '';
   // soft eyeshadow above the lid and a warm tint along the lower lid (or the chosen eyeshadow)
   if (p.eyeshadow !== 'none') {
-    eye += shadowWash(ctx, extraDefs, W * 0.04, -Hh * 0.78, W * 0.56, Hh * 0.4, W, Hh);
+    // the wash sits on the upper lid and tilts with the line from inner to outer corner (cat eyes rise outwards)
+    const wcx = (I.x + O.x) / 2 + W * 0.04;
+    const tilt = (Math.atan2(O.y - I.y, O.x - I.x) * 180) / Math.PI;
+    const s0 = sh.low[0];
+    eye += shadowWash(ctx, extraDefs, wcx, yAt(sh.up, wcx) - Hh * 0.28, W * 0.56, Hh * 0.4, W, Hh, { x: s0.x + W * 0.02, y: s0.y + Hh * 0.1 }, tilt);
   } else eye += ellipse(W * 0.08, -Hh * 0.42, W * 0.66, Hh * 0.62, { fill: `url(#${shadowG})` });
   if (p.eyeshadow === 'none') eye += ellipse(W * 0.06, Hh * 0.5, W * 0.5, Hh * 0.26, { fill: `url(#${shadowG})`, opacity: 0.7 });
 
@@ -280,7 +305,7 @@ function eyeSvg(ctx: Ctx, side: -1 | 1, irisColor: string, W: number, Hh: number
       eye += lash(lowPath(f), Math.PI - 0.45 - 0.6 * f, Hh * 0.17 * lenF, lw * 0.55, lid, { opacity: 0.55 });
     });
   }
-  if (p.eyeshadow === 'glitter') eye += sparkles(ctx, W, Hh, 1, 0);
+  if (p.eyeshadow === 'glitter') eye += sparkles(ctx, W, Hh, 1, 0, true, { up: sh.up, low: [O, ...sh.low, I] });
   return `<defs>${defs}${extraDefs.join('')}</defs>${group(eye, { transform: tr })}`;
 }
 

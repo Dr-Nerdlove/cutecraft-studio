@@ -48,8 +48,9 @@ A new style mode implements the `Mode` interface (`src/core/mode.ts`) and is add
 
 ## Build checks and publishing
 
-Every push and pull request is built by GitHub Actions (`.github/workflows/pages.yml`: `npm ci` + `npm run build`).
-A push to `main` that builds successfully is published automatically to GitHub Pages at <https://dr-nerdlove.github.io/cutecraft-studio/>.
+Every pull request is built by GitHub Actions (`.github/workflows/ci.yml`: `npm ci` + `npm run build`).
+Every push to `main` (every merge) is built again and published by `.github/workflows/pages.yml`.
+If that build succeeds, the app is published automatically to GitHub Pages at <https://dr-nerdlove.github.io/cutecraft-studio/>.
 Never upload built files by hand. One-time setup in the repository: Settings → Pages → Source: **GitHub Actions**.
 
 ## Saved data

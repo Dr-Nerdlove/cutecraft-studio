@@ -18,6 +18,23 @@ export function earsSvg(ctx: Ctx): string {
   return out;
 }
 
+/** High cheekbones: a light ridge on the bone with a soft hollow shadow right below it (clipped to the face). */
+function cheekbones(ctx: Ctx): string {
+  const { g, p } = ctx;
+  if (p.faceShape !== 'highcheek') return '';
+  const lo = faceLayout(ctx);
+  const soft = `url(#${ctx.soft})`;
+  const shadow = darken(ctx.skinShade, 0.05);
+  let out = '';
+  for (const s of [-1, 1] as const) {
+    const x = s * g.hw * 0.7;
+    const y = lo.eyeY + g.u * 0.2;
+    out += ellipse(x * 0.98, y + g.u * 0.075, g.hw * 0.3, g.u * 0.05, { fill: shadow, opacity: s < 0 ? 0.28 : 0.4, filter: soft, transform: `rotate(${s * -22} ${x} ${y})` });
+    out += ellipse(x * 0.95, y - g.u * 0.015, g.hw * 0.26, g.u * 0.028, { fill: '#ffffff', opacity: s < 0 ? 0.3 : 0.18, filter: soft, transform: `rotate(${s * -22} ${x} ${y})` });
+  }
+  return out;
+}
+
 export function faceBaseSvg(ctx: Ctx): string {
   const { g } = ctx;
   const lo = faceLayout(ctx);
@@ -45,7 +62,8 @@ export function faceBaseSvg(ctx: Ctx): string {
     ellipse(-g.headW * 0.01, lerp(lo.eyeY, lo.noseY, 0.65), g.headW * 0.022, g.u * 0.045, { fill: '#ffffff', opacity: 0.2, filter: soft }) +
     ellipse(-(lo.eyeDX + lo.eyeW * 0.1), lo.eyeY + g.u * 0.1, lo.eyeW * 0.35, g.u * 0.03, { fill: '#ffffff', opacity: 0.3, filter: soft }) +
     ellipse(g.hw * 0.25, g.yChin - g.u * 0.02, g.hw * 0.95, g.u * 0.16, { fill: shadow, opacity: 0.35, filter: `url(#${ctx.soft})` }) +
-    ellipse(-g.hw * 0.12, lo.eyeY + g.u * 0.08, g.hw * 0.75, g.u * 0.3, { fill: `url(#${glow})` });
+    ellipse(-g.hw * 0.12, lo.eyeY + g.u * 0.08, g.hw * 0.75, g.u * 0.3, { fill: `url(#${glow})` }) +
+    cheekbones(ctx);
   return (
     `<defs>${defs}</defs>` +
     `<clipPath id="${ctx.faceClip}">${path(ctx.faceD)}</clipPath>` +
@@ -123,29 +141,69 @@ export function noseSvg(ctx: Ctx): string {
 }
 
 /**
- * Closed lips: upper lip with a cupid's bow, fuller lower lip with a gloss highlight, a soft shadow
- * underneath. `lift` raises the corners (smile), `scale` changes the width, `tint` the colour strength.
+ * Closed lips: a slim upper lip with a soft cupid's bow, a fuller lower lip with a small gloss highlight,
+ * a soft shadow underneath. `lift` raises the corners (smile), `scale` changes the width, `full` the
+ * thickness of the lips, `tint` the colour strength.
  */
-function lips(ctx: Ctx, w: number, y: number, lift: number, scale: number, tint: number): string {
+function lips(ctx: Ctx, w: number, y: number, lift: number, scale: number, tint: number, full = 1): string {
   const { g } = ctx;
-  const hw = w * 0.62 * scale;
+  const hw = w * 0.6 * scale;
   const base = mix(ctx.skin, '#d24a64', tint);
-  const upperC = darken(base, 0.08);
-  const lineC = mix(darken(base, 0.22), '#6a2434', 0.35);
+  const upperC = darken(base, 0.07);
+  const lineC = mix(darken(base, 0.25), '#6a2434', 0.35);
   const cy = y - lift;
-  const upper = `${M(-hw, cy)}${C(-hw * 0.6, y - w * 0.06, -w * 0.2, y - w * 0.22, -w * 0.1, y - w * 0.2)}${Q(0, y - w * 0.2, 0, y - w * 0.13)}${Q(0, y - w * 0.2, w * 0.1, y - w * 0.2)}${C(w * 0.2, y - w * 0.22, hw * 0.6, y - w * 0.06, hw, cy)}`;
-  const mid = `${Q(0, y + w * 0.06 + lift * 0.4, -hw, cy)}`;
-  const lower = `${M(-hw, cy)}${Q(0, y + w * 0.06 + lift * 0.4, hw, cy)}${C(hw * 0.7, y + w * 0.36, -hw * 0.7, y + w * 0.36, -hw, cy)}Z`;
+  const sag = y + w * 0.03 + lift * 0.4; // control point of the seam between the lips
+  const up = w * 0.1 * full; // height of the upper lip
+  const lo = w * 0.17 * full; // depth of the lower lip
+  // upper lip: corner -> low shoulder -> peak of the bow -> dip in the middle -> and mirrored
+  const upper =
+    `${M(-hw, cy)}${C(-hw * 0.6, cy - up * 0.35, -w * 0.2, y - up * 1.25, -w * 0.085, y - up * 1.3)}` +
+    `${Q(-w * 0.03, y - up * 1.3, 0, y - up * 0.95)}${Q(w * 0.03, y - up * 1.3, w * 0.085, y - up * 1.3)}` +
+    `${C(w * 0.2, y - up * 1.25, hw * 0.6, cy - up * 0.35, hw, cy)}`;
+  const seam = `${Q(0, sag, -hw, cy)}`;
+  const lower = `${M(-hw, cy)}${Q(0, sag, hw, cy)}${C(hw * 0.72, y + lo + w * 0.02, -hw * 0.72, y + lo + w * 0.02, -hw, cy)}Z`;
   const gid = ctx.uid('lip');
-  const defs = `<radialGradient id="${gid}" cx="0.45" cy="0.35" r="0.7"><stop offset="0" stop-color="${lighten(base, 0.07)}"/><stop offset="1" stop-color="${darken(base, 0.05)}"/></radialGradient>`;
+  const defs = `<radialGradient id="${gid}" cx="0.45" cy="0.3" r="0.75"><stop offset="0" stop-color="${lighten(base, 0.08)}"/><stop offset="1" stop-color="${darken(base, 0.04)}"/></radialGradient>`;
   return (
     `<defs>${defs}</defs>` +
-    ellipse(0, y + w * 0.42, hw * 0.55, w * 0.1, { fill: ctx.skinShade, opacity: 0.45, filter: `url(#${ctx.soft})` }) +
+    ellipse(0, y + lo + w * 0.1, hw * 0.5, w * 0.06, { fill: ctx.skinShade, opacity: 0.35, filter: `url(#${ctx.soft})` }) +
     path(lower, { fill: `url(#${gid})` }) +
-    path(upper + mid + 'Z', { fill: upperC }) +
-    stroke(ctx, `${M(-hw * 0.97, cy - lift * 0.1)}${Q(0, y + w * 0.06 + lift * 0.4, hw * 0.97, cy - lift * 0.1)}`, lineC, Math.max(0.4, g.lw * 0.7), { opacity: 0.85 }) +
-    ellipse(-w * 0.06, y + w * 0.16, w * 0.15, w * 0.04, { fill: '#ffffff', opacity: 0.55 }) +
-    ellipse(-w * 0.12, y - w * 0.15, w * 0.05, w * 0.018, { fill: '#ffffff', opacity: 0.4 })
+    path(upper + seam + 'Z', { fill: upperC }) +
+    stroke(ctx, `${M(-hw, cy)}${Q(0, sag, hw, cy)}`, lineC, Math.max(0.4, g.lw * 0.7), { opacity: 0.85 }) +
+    ellipse(-w * 0.05, y + lo * 0.5, w * 0.1, w * 0.025, { fill: '#ffffff', opacity: 0.5, filter: `url(#${ctx.soft})` })
+  );
+}
+
+/**
+ * Open mouth seen from the front: a dark cavity between two lips, an upper row of teeth that follows the
+ * upper lip, and a tongue at the bottom. `hw` is the half width, `depth` how far the mouth opens.
+ */
+function openMouth(ctx: Ctx, w: number, y: number, hw: number, depth: number, smile: number): string {
+  const { g } = ctx;
+  const base = mix(ctx.skin, '#d24a64', 0.55);
+  const lineC = mix(darken(base, 0.25), '#6a2434', 0.4);
+  const cavity = darken(mix(base, '#5a1a2e', 0.6), 0.02);
+  const sw = Math.max(0.6, g.lw * 0.8);
+  const cy = y - smile; // the corners lift when smiling
+  const ctrl = y + w * 0.04;
+  const bottom = y + depth;
+  const d = `${M(-hw, cy)}${Q(0, ctrl, hw, cy)}${C(hw * 0.78, bottom + depth * 0.1, -hw * 0.78, bottom + depth * 0.1, -hw, cy)}Z`;
+  const teethH = depth * 0.38;
+  const teeth = `${M(-hw, cy - 1)}${Q(0, ctrl - 1, hw, cy - 1)}${L(hw, cy + teethH)}${Q(0, ctrl + teethH * 1.15, -hw, cy + teethH)}Z`;
+  const id = ctx.uid('mouth');
+  return (
+    ellipse(0, bottom + w * 0.1, hw * 0.55, w * 0.05, { fill: ctx.skinShade, opacity: 0.3, filter: `url(#${ctx.soft})` }) +
+    `<clipPath id="${id}">${path(d)}</clipPath>` +
+    path(d, { fill: cavity }) +
+    group(
+      ellipse(0, bottom + depth * 0.05, hw * 0.55, depth * 0.38, { fill: '#f27a93' }) +
+        path(teeth, { fill: '#fffafa' }) +
+        path(`${M(-hw, cy + teethH)}${Q(0, ctrl + teethH * 1.15, hw, cy + teethH)}`, { fill: 'none', stroke: '#e8c9d0', 'stroke-width': 0.6 }),
+      { 'clip-path': `url(#${id})` },
+    ) +
+    // a hint of lower lip under the opening, then the outline of the opening
+    stroke(ctx, `${M(-hw * 0.7, y + depth * 0.82)}${Q(0, bottom + depth * 0.38, hw * 0.7, y + depth * 0.82)}`, lighten(base, 0.05), Math.max(1, w * 0.07), { opacity: 0.75 }) +
+    path(d, { fill: 'none', stroke: lineC, 'stroke-width': sw, 'stroke-linejoin': 'round', opacity: 0.9 })
   );
 }
 
@@ -156,74 +214,51 @@ export function mouthSvg(ctx: Ctx): string {
   const y = lo.mouthY;
   const lip = mix(ctx.skinLine, '#c2405c', 0.6);
   const inner = darken(mix(lip, '#5a1a2e', 0.5), 0.02);
-  const sw = Math.max(0.9, g.lw * 0.95);
+  const sw = Math.max(0.8, g.lw * 0.9);
   switch (p.mouth) {
     case 'smile':
       // closed, softly smiling lips
-      return lips(ctx, w, y, w * 0.07, 0.95, 0.4);
-    case 'open': {
-      const id = ctx.uid('mouth');
-      const d = `${M(-w * 0.52, y - w * 0.02)}${Q(0, y + w * 0.12, w * 0.52, y - w * 0.02)}${C(w * 0.48, y + w * 0.62, -w * 0.48, y + w * 0.62, -w * 0.52, y - w * 0.02)}Z`;
-      return (
-        `<clipPath id="${id}">${path(d)}</clipPath>` +
-        path(d, { fill: inner }) +
-        group(ellipse(0, y + w * 0.52, w * 0.3, w * 0.2, { fill: '#ff8fa3' }) + path(`${M(-w * 0.4, y)}${Q(0, y + w * 0.12, w * 0.4, y)}${L(w * 0.34, y + w * 0.1)}${Q(0, y + w * 0.2, -w * 0.34, y + w * 0.1)}Z`, { fill: '#ffffff', opacity: 0.95 }), { 'clip-path': `url(#${id})` }) +
-        path(d, { fill: 'none', stroke: lip, 'stroke-width': sw, 'stroke-linejoin': 'round' })
-      );
-    }
+      return lips(ctx, w, y, w * 0.07, 0.95, 0.4, 1.25);
+    case 'open':
+      return openMouth(ctx, w, y, w * 0.5, w * 0.42, w * 0.05);
     case 'cat': {
-      const d = `${M(-w * 0.5, y - w * 0.04)}${Q(-w * 0.26, y + w * 0.3, 0, y + w * 0.02)}${Q(w * 0.26, y + w * 0.3, w * 0.5, y - w * 0.04)}`;
+      // a small "w": two soft arcs meeting in the middle
+      const d = `${M(-w * 0.46, y - w * 0.03)}${C(-w * 0.4, y + w * 0.22, -w * 0.08, y + w * 0.2, 0, y - w * 0.02)}${C(w * 0.08, y + w * 0.2, w * 0.4, y + w * 0.22, w * 0.46, y - w * 0.03)}`;
       return stroke(ctx, d, lip, sw);
     }
     case 'o': {
-      const rx = w * 0.2, ry = w * 0.26;
+      const rx = w * 0.19, ry = w * 0.24;
       const id = ctx.uid('mouth');
+      const cy = y + ry * 0.35;
       return (
-        `<clipPath id="${id}">${ellipse(0, y + ry * 0.4, rx, ry)}</clipPath>` +
-        ellipse(0, y + ry * 0.4, rx, ry, { fill: inner }) +
-        group(ellipse(0, y + ry * 1.05, rx * 0.8, ry * 0.5, { fill: '#ff8fa3' }), { 'clip-path': `url(#${id})` }) +
-        ellipse(0, y + ry * 0.4, rx, ry, { fill: 'none', stroke: lip, 'stroke-width': sw })
+        // soft lip ring around the opening
+        ellipse(0, cy, rx * 1.45, ry * 1.3, { fill: mix(ctx.skin, '#d24a64', 0.45), opacity: 0.9 }) +
+        `<clipPath id="${id}">${ellipse(0, cy, rx, ry)}</clipPath>` +
+        ellipse(0, cy, rx, ry, { fill: inner }) +
+        group(ellipse(0, cy + ry * 0.75, rx * 0.8, ry * 0.5, { fill: '#f27a93' }), { 'clip-path': `url(#${id})` }) +
+        ellipse(0, cy, rx, ry, { fill: 'none', stroke: lip, 'stroke-width': sw * 0.8 })
       );
     }
     case 'pout':
       // small, full lips
-      return lips(ctx, w * 0.9, y, -w * 0.02, 0.72, 0.6);
+      return lips(ctx, w * 0.92, y, -w * 0.01, 0.8, 0.6, 1.7);
     case 'lips':
-      return lips(ctx, w, y, 0, 1, 0.55);
+      return lips(ctx, w, y, 0, 1, 0.55, 1.45);
     case 'smirk': {
       // one-sided smile: the right corner lifts more
-      const d = `${M(-w * 0.45, y + w * 0.04)}${Q(-w * 0.05, y + w * 0.2, w * 0.2, y + w * 0.06)}${Q(w * 0.4, y - w * 0.02, w * 0.52, y - w * 0.14)}`;
-      return (
-        stroke(ctx, d, lip, sw) +
-        stroke(ctx, `${M(w * 0.52, y - w * 0.14)}${L(w * 0.58, y - w * 0.2)}`, lip, sw * 0.8) +
-        stroke(ctx, `${M(w * 0.5, y - w * 0.04)}${Q(w * 0.56, y - w * 0.08, w * 0.58, y - w * 0.04)}`, lip, sw * 0.5, { opacity: 0.5 })
-      );
+      const d = `${M(-w * 0.42, y + w * 0.04)}${C(-w * 0.2, y + w * 0.12, w * 0.08, y + w * 0.12, w * 0.28, y + w * 0.02)}${Q(w * 0.42, y - w * 0.05, w * 0.5, y - w * 0.14)}`;
+      return stroke(ctx, d, lip, sw) + stroke(ctx, `${M(w * 0.5, y - w * 0.14)}${L(w * 0.55, y - w * 0.19)}`, lip, sw * 0.8);
     }
-    case 'grin': {
+    case 'grin':
       // wide smile showing a row of teeth
-      const id = ctx.uid('mouth');
-      const hw = w * 0.62;
-      const d = `${M(-hw, y - w * 0.02)}${Q(0, y + w * 0.04, hw, y - w * 0.02)}${C(hw * 0.8, y + w * 0.52, -hw * 0.8, y + w * 0.52, -hw, y - w * 0.02)}Z`;
-      return (
-        `<clipPath id="${id}">${path(d)}</clipPath>` +
-        path(d, { fill: inner }) +
-        group(
-          path(`${M(-hw, y - w * 0.04)}${L(hw, y - w * 0.04)}${L(hw, y + w * 0.16)}${Q(0, y + w * 0.22, -hw, y + w * 0.16)}Z`, { fill: '#ffffff' }) +
-          ellipse(0, y + w * 0.5, w * 0.3, w * 0.16, { fill: '#ff8fa3' }),
-          { 'clip-path': `url(#${id})` },
-        ) +
-        path(d, { fill: 'none', stroke: lip, 'stroke-width': sw, 'stroke-linejoin': 'round' }) +
-        stroke(ctx, `${M(-hw, y - w * 0.02)}${L(-hw - w * 0.05, y - w * 0.09)}`, lip, sw * 0.8) +
-        stroke(ctx, `${M(hw, y - w * 0.02)}${L(hw + w * 0.05, y - w * 0.09)}`, lip, sw * 0.8)
-      );
-    }
+      return openMouth(ctx, w, y, w * 0.62, w * 0.34, w * 0.07);
     case 'fang': {
-      const d = `${M(-w * 0.55, y)}${Q(0, y + w * 0.5, w * 0.55, y)}`;
-      const fx = w * 0.27, fy = y + w * 0.2;
+      const d = `${M(-w * 0.5, y - w * 0.02)}${C(-w * 0.3, y + w * 0.28, w * 0.3, y + w * 0.28, w * 0.5, y - w * 0.02)}`;
+      const fx = w * 0.24, fy = y + w * 0.155;
       return (
         stroke(ctx, d, lip, sw) +
-        path(`${M(fx - w * 0.07, fy - w * 0.015)}${L(fx + w * 0.07, fy - w * 0.03)}${L(fx + w * 0.005, fy + w * 0.17)}Z`, { fill: '#ffffff', stroke: lip, 'stroke-width': sw * 0.6, 'stroke-linejoin': 'round' }) +
-        stroke(ctx, `${M(w * 0.55, y)}${L(w * 0.6, y - w * 0.07)}`, lip, sw * 0.8)
+        path(`${M(fx - w * 0.06, fy - w * 0.012)}${L(fx + w * 0.06, fy - w * 0.02)}${L(fx + w * 0.005, fy + w * 0.14)}Z`, { fill: '#ffffff', stroke: lip, 'stroke-width': sw * 0.6, 'stroke-linejoin': 'round' }) +
+        stroke(ctx, `${M(w * 0.5, y - w * 0.02)}${L(w * 0.54, y - w * 0.08)}`, lip, sw * 0.8)
       );
     }
   }

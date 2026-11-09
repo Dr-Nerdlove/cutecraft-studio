@@ -63,7 +63,7 @@ export function randomAnime(): AnimeParams {
     waist: rnd(15, 70),
     hips: rnd(25, 80),
     skin: pick(SKIN_TONES),
-    faceShape: pick(['round', 'oval', 'heart', 'square'] as const),
+    faceShape: pick(['round', 'oval', 'heart', 'square', 'highcheek', 'long', 'delicate', 'broad'] as const),
     blush: rnd(20, 70),
     blushColor: pick(BLUSH_COLORS),
     freckles: chance(0.18),

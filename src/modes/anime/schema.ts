@@ -6,7 +6,7 @@ import {
 /** Typed view of the anime parameters. The keys here are the saved keys: never rename them. */
 export interface AnimeParams {
   proportion: number; height: number; build: number; shoulders: number; waist: number; hips: number; skin: string;
-  faceShape: 'round' | 'oval' | 'heart' | 'square';
+  faceShape: 'round' | 'oval' | 'heart' | 'square' | 'highcheek' | 'long' | 'delicate' | 'broad';
   blush: number; blushColor: string; freckles: boolean;
   nose: 'dot' | 'line' | 'none' | 'button' | 'defined' | 'soft';
   mouth: 'smile' | 'open' | 'cat' | 'o' | 'pout' | 'fang' | 'lips' | 'smirk' | 'grin';
@@ -65,6 +65,8 @@ export const animeCategories: readonly Category[] = [
       choice('faceShape', 'a.faceShape', [
         { value: 'round', labelKey: 'a.faceShape.round' }, { value: 'oval', labelKey: 'a.faceShape.oval' },
         { value: 'heart', labelKey: 'a.faceShape.heart' }, { value: 'square', labelKey: 'a.faceShape.square' },
+        { value: 'highcheek', labelKey: 'a.faceShape.highcheek' }, { value: 'long', labelKey: 'a.faceShape.long' },
+        { value: 'delicate', labelKey: 'a.faceShape.delicate' }, { value: 'broad', labelKey: 'a.faceShape.broad' },
       ], 'oval'),
       slider('blush', 'a.blush', 0, 100, 1, 40),
       color('blushColor', 'a.blushColor', BLUSH_COLORS, '#ff9fb2'),

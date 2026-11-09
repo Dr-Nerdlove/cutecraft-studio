@@ -72,7 +72,12 @@ export const VIEW_H = 600;
 export const GROUND_Y = 552;
 
 // Semi-realistic faces: a bit narrower and longer than classic anime faces.
-const FACE_RATIO = { round: 0.9, oval: 0.86, heart: 0.88, square: 0.89 } as const;
+const FACE_RATIO = { round: 0.9, oval: 0.86, heart: 0.88, square: 0.89, highcheek: 0.87, long: 0.78, delicate: 0.8, broad: 0.97 } as const;
+
+/** How much the lower half of the face narrows towards the chin (1 = full, smaller = the shape already narrows by itself). */
+const JAW_SLIM: Record<AnimeParams['faceShape'], number> = {
+  round: 0.24, oval: 0.24, heart: 0.1, square: 0.24, highcheek: 0.1, long: 0.24, delicate: 0.1, broad: 0.2,
+};
 
 export function computeGeo(p: AnimeParams): Geo {
   // Normal anime proportions only; the saved `proportion` value is ignored.
@@ -80,9 +85,16 @@ export function computeGeo(p: AnimeParams): Geo {
   const H = 500;
   // about 7 heads tall: a grown-up, semi-realistic figure
   const u = H * lerp(0.5, 1 / 7.1, k);
-  const headW = u * FACE_RATIO[p.faceShape] * lerp(1.1, 0.93, k);
+  // Below a slider's default the range is stretched past the old minimum (slimmer); at or above the
+  // default the mapping is exactly the old value / 100, so existing figures do not change.
+  const slimT = (v: number, def: number, lo: number): number => (v >= def ? v / 100 : lerp(lo, def / 100, v / def));
+  const build = slimT(p.build, 40, -0.5);
+  const sh = slimT(p.shoulders, 45, -0.3);
   // Body measurements use the oval head width, so the face shape never changes the body.
   const baseHeadW = u * 0.81 * lerp(1.1, 0.93, k);
+  // A broader body gets a slightly broader face (and a slimmer one a narrower face); 1 at the defaults.
+  const faceBroad = lerp(0.95, 1.07, build) / lerp(0.95, 1.07, 0.4) * (lerp(0.97, 1.04, sh) / lerp(0.97, 1.04, 0.45));
+  const headW = u * FACE_RATIO[p.faceShape] * lerp(1.1, 0.93, k) * faceBroad;
   const hw = headW / 2;
   // fine, light line art
   const lw = clamp(u * 0.0085, 0.8, 2.2);
@@ -98,19 +110,17 @@ export function computeGeo(p: AnimeParams): Geo {
   const shoeH = clamp(u * 0.09, 11, 18);
   const yAnkle = -shoeH;
 
-  // Below a slider's default the range is stretched past the old minimum (slimmer); at or above the
-  // default the mapping is exactly the old value / 100, so existing figures do not change.
-  const slimT = (v: number, def: number, lo: number): number => (v >= def ? v / 100 : lerp(lo, def / 100, v / def));
-  const build = slimT(p.build, 40, -0.5);
-  const sh = slimT(p.shoulders, 45, -0.3);
   const waistT = slimT(p.waist, 40, -0.4);
   const hipsT = slimT(p.hips, 50, -0.3);
   const flat = (1 - k) * 0.7; // chibi bodies are simple beans
+  // The shoulder slider moves the shoulders only: waist and hips are measured from a fixed reference
+  // width (the shoulder width at the default slider), so they do not change when the shoulders do.
+  const refW = baseHeadW * lerp(0.6, 1.42, k) * lerp(0.84, 1.16, 0.45) * lerp(0.95, 1.07, build);
   const shW = baseHeadW * lerp(0.6, 1.42, k) * lerp(0.84, 1.16, sh) * lerp(0.95, 1.07, build);
-  const waistW = lerp(shW * lerp(0.58, 0.92, waistT) * lerp(0.92, 1.1, build), shW * 0.95, flat);
-  const hipW = lerp(shW * lerp(0.66, 1.22, hipsT) * lerp(0.93, 1.1, build), shW * 0.98, flat);
+  const waistW = lerp(refW * lerp(0.58, 0.92, waistT) * lerp(0.92, 1.1, build), refW * 0.95, flat);
+  const hipW = lerp(refW * lerp(0.66, 1.22, hipsT) * lerp(0.93, 1.1, build), refW * 0.98, flat);
 
-  const armR = u * lerp(0.075, 0.098, k) * lerp(0.92, 1.12, build);
+  const armR = u * lerp(0.085, 0.118, k) * lerp(0.92, 1.12, build);
   const armLen = torsoLen * lerp(0.86, 1.22, k);
 
   const hipHW = hipW / 2;
@@ -201,6 +211,14 @@ const PROFILES: Record<AnimeParams['faceShape'], Profile> = {
   // wide cheekbones, a jaw that narrows gently and a small, softly rounded chin (no V point)
   heart: [[0, 0], [0.06, 0.46], [0.14, 0.77], [0.28, 0.98], [0.38, 1], [0.52, 0.95], [0.66, 0.84], [0.78, 0.68], [0.88, 0.51], [0.95, 0.36], [0.985, 0.2], [1, 0]],
   square: [[0, 0], [0.06, 0.44], [0.14, 0.72], [0.28, 0.94], [0.46, 1], [0.66, 0.97], [0.82, 0.89], [0.93, 0.64], [0.985, 0.33], [1, 0]],
+  // high, prominent cheekbones: a narrower forehead, the widest point high up, then a clear hollow down to a defined jaw
+  highcheek: [[0, 0], [0.06, 0.38], [0.14, 0.62], [0.26, 0.9], [0.35, 1], [0.48, 0.93], [0.62, 0.8], [0.76, 0.64], [0.88, 0.47], [0.95, 0.33], [0.985, 0.18], [1, 0]],
+  // longer and slimmer than the oval, with straighter sides
+  long: [[0, 0], [0.06, 0.38], [0.14, 0.65], [0.28, 0.88], [0.46, 0.99], [0.66, 0.97], [0.8, 0.88], [0.9, 0.7], [0.95, 0.52], [0.985, 0.26], [1, 0]],
+  // small and fine: a slim jaw and a small pointed-round chin
+  delicate: [[0, 0], [0.06, 0.4], [0.14, 0.68], [0.28, 0.9], [0.42, 0.99], [0.58, 0.93], [0.72, 0.8], [0.85, 0.6], [0.94, 0.38], [0.985, 0.2], [1, 0]],
+  // a broad face with a strong, wide jaw
+  broad: [[0, 0], [0.06, 0.46], [0.14, 0.76], [0.28, 0.96], [0.48, 1], [0.66, 0.98], [0.82, 0.91], [0.93, 0.72], [0.985, 0.4], [1, 0]],
 };
 
 /** Relative face half width (0..1) at t = 0 (skull top) .. 1 (chin). */
@@ -219,8 +237,8 @@ export function faceRel(g: Geo, shape: AnimeParams['faceShape'], t: number): num
   }
   // semi-realistic faces: widest at the cheekbones, tapering to a slim, soft chin
   const jaw = clamp((tt - 0.5) / 0.5, 0, 1);
-  // (the heart shape already narrows a lot, so its jaw is slimmed less)
-  return rel * (1 - (shape === 'heart' ? 0.1 : 0.24) * g.k * Math.pow(jaw, 1.5));
+  // (shapes that already narrow a lot are slimmed less)
+  return rel * (1 - JAW_SLIM[shape] * g.k * Math.pow(jaw, 1.5));
 }
 
 export function faceHalfWidthAt(g: Geo, shape: AnimeParams['faceShape'], y: number): number {

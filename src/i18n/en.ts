@@ -54,7 +54,6 @@ export const en: Dictionary = {
   'gallery.load': 'Load',
   'gallery.delete': 'Delete',
   'gallery.close': 'Close',
-  'gallery.autoName': 'Cutie {n}',
   'gallery.unnamed': 'Unnamed',
 
   'ui.colorCustom': 'Pick a custom colour',

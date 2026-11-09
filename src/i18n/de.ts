@@ -53,7 +53,6 @@ export const de = {
   'gallery.load': 'Laden',
   'gallery.delete': 'Löschen',
   'gallery.close': 'Schließen',
-  'gallery.autoName': 'Süßes Wesen {n}',
   'gallery.unnamed': 'Ohne Namen',
 
   'ui.colorCustom': 'Eigene Farbe wählen',

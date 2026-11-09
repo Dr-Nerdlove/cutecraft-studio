@@ -6,7 +6,7 @@ import { onLangChange, t, type Key } from '../i18n';
 import { getTheme, onThemeChange, toggleTheme } from './theme';
 import { buildControls, type ControlsHandle } from './controls';
 import { askConfirm, askText, toast } from './dialog';
-import { addToGallery, nextAutoName, openGallery } from './gallery';
+import { addToGallery, openGallery } from './gallery';
 import { openFeedback } from './feedback';
 import { Store } from './store';
 
@@ -80,9 +80,9 @@ export function mountApp(root: HTMLElement): void {
   });
 
   async function save(): Promise<void> {
-    const name = await askText(t('dialog.saveTitle'), t('dialog.namePlaceholder'), store.name || nextAutoName(), t('dialog.ok'));
+    const name = await askText(t('dialog.saveTitle'), t('dialog.namePlaceholder'), store.name, t('dialog.ok'));
     if (name === null) return;
-    const finalName = name.trim() || nextAutoName();
+    const finalName = name.trim();
     if (addToGallery(store.character, finalName)) {
       store.name = finalName;
       toast(t('toast.saved'));

@@ -11,6 +11,7 @@ All notable changes to CuteCraft Studio. Format: newest first.
 
 ### Changed
 
+- Saving a character no longer suggests an automatic name like "Cutie 1": the name field stays empty unless you type a name (unnamed characters show as "Unnamed" in the gallery).
 - Doe eyes are rounder (no boxy corners) and have no eyelid lines; the eyeliner is now a clean line that follows the lid and ends in a small soft wing.
 - Eyelashes (all styles, upper and lower) look more natural: fewer, curved, tapered lashes of varied length that lean towards the outer corner; lower lashes are short and sparse.
 - The oval face is a little wider.

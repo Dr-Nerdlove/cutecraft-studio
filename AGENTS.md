@@ -214,7 +214,8 @@ missing, with a recommendation, and let the people choose.
   (3) Figure geometry is computed once in `src/modes/anime/geometry.ts`; positions of hair, clothes and
   accessories derive from it. New parts must derive from it too, and the extents estimate there (`topExtra`,
   `halfW`) must be updated so the figure stays inside the picture.
-- **Repository:** public (checked Nov 2026); licence AGPL-3.0 (`LICENSE`). Version scheme `vMAJOR.MINOR.PATCH`. `.gitignore` and
+- **Repository:** public (checked Nov 2026); `main` is protected by the ruleset "protect main branch" (no force
+  pushes, no deletion; status checks not required, as of Nov 2026); licence AGPL-3.0 (`LICENSE`). Version scheme `vMAJOR.MINOR.PATCH`. `.gitignore` and
   `CHANGELOG.md` exist. CI: `.github/workflows/ci.yml` runs `npm ci` + `npm run build` on every pull request
   (check name `build`); merge only when it passes. `pages.yml` builds and deploys only on pushes to `main`, so
   pull requests show one `build` check and no skipped `deploy` (the owner found the skipped jobs confusing).

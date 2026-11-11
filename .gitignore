@@ -7,3 +7,6 @@ dist/
 .idea/
 .vscode/
 *.tsbuildinfo
+
+# Claude Code local settings (allowed commands, may hold paths or tokens)
+.claude/settings.local.json

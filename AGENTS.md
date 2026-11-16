@@ -218,6 +218,8 @@ missing, with a recommendation, and let the people choose.
   pushes, no deletion; status checks not required, as of Nov 2026); licence AGPL-3.0 (`LICENSE`). Version scheme `vMAJOR.MINOR.PATCH`. `.gitignore` and
   `CHANGELOG.md` exist. CI: `.github/workflows/ci.yml` runs `npm ci` + `npm run build` on every pull request
   (check name `build`); merge only when it passes. `pages.yml` builds and deploys only on pushes to `main`, so
-  pull requests show one `build` check and no skipped `deploy` (the owner found the skipped jobs confusing).
+  pull requests show one `build` check and no skipped `deploy` (the owner found the skipped jobs confusing). GitHub security settings (set by the
+  owner, Nov 2026): Dependabot alerts on (with the dependency graph), secret scanning with push protection on; automatic dependency submission and AI
+  scan off (Actions runs and AI credits for little gain). A Dependabot alert is checked in a session before anything is changed.
 - **Limits of the environment:** cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP tools.
   Sessions push to feature branches; merging into `main` only when the owner asks.

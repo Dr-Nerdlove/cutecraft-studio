@@ -1,6 +1,6 @@
 @AGENTS.md
 
-<!-- owner-rules v16: claude (CLAUDE.md) - begin -->
+<!-- owner-rules v19: claude (CLAUDE.md) - begin -->
 
 ## Claude: models and usage
 
@@ -49,4 +49,4 @@ and when the owner says the limits or the offer have changed, follow what they s
   repository (commits, documentation, pull requests) stays fully written.
 - Waiting for something (a build, a release): schedule a check-in instead of polling step by step.
 
-<!-- owner-rules v16: claude (CLAUDE.md) - end -->
+<!-- owner-rules v19: claude (CLAUDE.md) - end -->

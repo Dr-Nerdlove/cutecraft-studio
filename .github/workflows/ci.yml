@@ -1,9 +1,16 @@
 # Checks every pull request: installs and builds the app (type check + Vite build).
 # Publishing is done separately by pages.yml once a pull request is merged into main.
+# Pull requests that only touch documentation (Markdown files incl. README, CHANGELOG, AGENTS.md,
+# CLAUDE.md), docs/ or .claude/ are skipped. If the "build" check is ever made required for main,
+# remove paths-ignore here: a required check that never ran blocks the merge.
 name: CI
 
 on:
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.claude/**'
   workflow_dispatch:
 
 permissions:
@@ -16,6 +23,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

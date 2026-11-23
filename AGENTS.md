@@ -253,7 +253,9 @@ repository belongs to someone else, these points still apply unless "Project kno
 - **Release:** the web app is published to GitHub Pages (https://dr-nerdlove.github.io/cutecraft-studio/) by
   `.github/workflows/pages.yml` on every push to `main` - merging into `main` therefore publishes. Pages source
   in the repository settings must be "GitHub Actions" (set once by the owner; a cloud session cannot change
-  repository settings). Version tags and GitHub releases are not used yet.
+  repository settings). Version tags and GitHub releases are not used yet; there is no release workflow. When
+  releases (or the Android app) come, add a release workflow started by hand (`workflow_dispatch` with the
+  version), as the general rules under "GitHub Actions" describe.
 - **Traps:** (1) Saved characters live in `localStorage` (`cutecraft.gallery.v1`, `cutecraft.current.v1`) and are
   loaded through `migrate()` in `src/core/storage.ts`. Never rename or reuse a parameter `key` from a mode schema
   (e.g. `src/modes/anime/schema.ts`); add new keys with a default instead, so old saves keep working. (2) Every SVG
@@ -268,5 +270,9 @@ repository belongs to someone else, these points still apply unless "Project kno
   pull requests show one `build` check and no skipped `deploy` (the owner found the skipped jobs confusing). GitHub security settings (set by the
   owner, Nov 2026): Dependabot alerts on (with the dependency graph), secret scanning with push protection on; automatic dependency submission and AI
   scan off (Actions runs and AI credits for little gain). A Dependabot alert is checked in a session before anything is changed.
+  Whole history checked for secrets and personal data (Nov 2026: all 93 commits on all branches, every file
+  version including the screenshot's PNG metadata and the SVGs, and the commit messages): nothing found.
 - **Limits of the environment:** cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP tools.
-  Sessions push to feature branches; merging into `main` only when the owner asks.
+  Sessions push to feature branches; merging into `main` only when the owner asks. Cloud sessions cannot push
+  tags or change repository settings (Pages source, rulesets, security settings): the owner does those on
+  GitHub, and releases have to be started by hand under "Actions".
